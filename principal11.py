@@ -10,27 +10,23 @@ st.set_page_config(
 # Título da aplicação
 st.title("Ferramentaria")
 
-# Menu lateral como seleção única para navegação
-menu = st.sidebar.radio(
-    "Menu",
-    ["Movimentação", "Colaborador", "Ferramenta", "Relatorio"]
-)
+# Menu lateral
+st.sidebar.title("Menu")
 
-# Lógica de roteamento entre páginas
-if menu == "Movimentação":
-    st.header("Movimentação")
-    # Aqui você implementa o conteúdo específico da página Movimentação
-    st.write("Você está na página de Movimentação.")
-elif menu == "Colaborador":
-    st.header("Colaborador")
-    # Conteúdo página Colaborador
-    st.write("Você está na página de Colaborador.")
-elif menu == "Ferramenta":
-    st.header("Ferramenta")
-    # Conteúdo página Ferramenta
-    st.write("Você está na página de Ferramenta.")
-else:  # Relatorio
-    st.header("Relatorio")
-    # Conteúdo página Relatorio
-    st.write("Você está na página de Relatorio.")
+# Botões do menu
+if st.sidebar.button("Movimentação"):
+    st.write("Você selecionou: Movimentação")
+
+if st.sidebar.button("Colaborador"):
+    st.write("Você selecionou: Colaborador")
+
+if st.sidebar.button("Ferramenta"):
+    st.write("Você selecionou: Ferramenta")
+
+if st.sidebar.button("Relatorio"):
+    st.write("Você selecionou: Relatorio")
+
+# Conteúdo principal pode ser adicionado abaixo
+# Exemplo:
+# st.write("Bem-vindo à Ferramentaria! Selecione uma opção no menu lateral.")
 
