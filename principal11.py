@@ -3,7 +3,8 @@ import streamlit as st
 # Configuração da página
 st.set_page_config(
     page_title="Ferramentaria",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"  # Garante que o menu lateral fique sempre visível
 )
 
 # Título da aplicação
