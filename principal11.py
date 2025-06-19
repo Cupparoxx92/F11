@@ -10,23 +10,35 @@ st.set_page_config(
 # Título da aplicação
 st.title("Ferramentaria")
 
+# Inicializa estado de página
+if 'page' not in st.session_state:
+    st.session_state.page = None
+
 # Menu lateral
 st.sidebar.title("Menu")
 
-# Botões do menu
+# Botões do menu definem o branch a ser exibido
 if st.sidebar.button("Movimentação"):
-    st.write("Você selecionou: Movimentação")
-
+    st.session_state.page = 'movimentacao'
 if st.sidebar.button("Colaborador"):
-    st.write("Você selecionou: Colaborador")
-
+    st.session_state.page = 'colaborador'
 if st.sidebar.button("Ferramenta"):
-    st.write("Você selecionou: Ferramenta")
-
+    st.session_state.page = 'ferramenta'
 if st.sidebar.button("Relatorio"):
-    st.write("Você selecionou: Relatorio")
+    st.session_state.page = 'relatorio'
 
-# Conteúdo principal pode ser adicionado abaixo
-# Exemplo:
-# st.write("Bem-vindo à Ferramentaria! Selecione uma opção no menu lateral.")
-
+# Roteamento para cada branch
+if st.session_state.page == 'movimentacao':
+    st.header("Movimentação")
+    st.write("Você foi direcionado para o branch Movimentação.")
+elif st.session_state.page == 'colaborador':
+    st.header("Colaborador")
+    st.write("Você foi direcionado para o branch Colaborador.")
+elif st.session_state.page == 'ferramenta':
+    st.header("Ferramenta")
+    st.write("Você foi direcionado para o branch Ferramenta.")
+elif st.session_state.page == 'relatorio':
+    st.header("Relatorio")
+    st.write("Você foi direcionado para o branch Relatorio.")
+else:
+    st.write("Selecione uma opção no menu lateral para navegar entre os branches.")
