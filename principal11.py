@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, time
 
 # Configuração da página
 st.set_page_config(
@@ -39,10 +39,13 @@ if menu == "Movimentação":
     tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
 
     # Linha 4: Data e Hora da movimentação
-    data_hora = st.datetime_input(
-        "Data e Hora da Movimentação",
-        value=datetime.now()
-    )
+    col5, col6 = st.columns(2)
+    with col5:
+        data = st.date_input("Data da Movimentação", value=datetime.today())
+    with col6:
+        hora = st.time_input("Hora da Movimentação", value=datetime.now().time())
+
+    data_hora = datetime.combine(data, hora)
 
     # Linha 5: Observações
     observacoes = st.text_area("Observações (opcional)")
@@ -56,7 +59,7 @@ if menu == "Movimentação":
             f"Ferramenta: {ferramenta}\n"
             f"Descrição: {descricao}\n"
             f"Tipo: {tipo}\n"
-            f"Data/Hora: {data_hora}\n"
+            f"Data/Hora: {data_hora.strftime('%d/%m/%Y %H:%M')}\n"
             f"Observações: {observacoes}"
         )
 
