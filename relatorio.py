@@ -8,42 +8,51 @@ def pagina_relatorio():
     st.subheader("📑 Relatório de Movimentações")
 
     arquivo_movimentacao = 'movimentacao.csv'
+    arquivo_ferramentas = 'ferramentas.csv'
 
-    if not os.path.exists(arquivo_movimentacao):
-        st.warning("⚠️ Nenhuma movimentação registrada ainda.")
-        return
-
-    try:
+    # ========================
+    # Leitura dos Arquivos
+    # ========================
+    if os.path.exists(arquivo_movimentacao):
         df_mov = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig')
         df_mov['DataHora'] = pd.to_datetime(df_mov['DataHora'], format='%d/%m/%Y %H:%M:%S')
+    else:
+        st.warning("⚠️ Nenhuma movimentação registrada ainda.")
+        df_mov = pd.DataFrame()
 
-        # ------------------------------
-        # Bloco de Filtros
-        # ------------------------------
-        with st.expander("🔍 Filtros"):
-            col1, col2, col3, col4 = st.columns(4)
+    if os.path.exists(arquivo_ferramentas):
+        df_ferramentas = pd.read_csv(arquivo_ferramentas, encoding='utf-8-sig')
+    else:
+        df_ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao', 'StatusConserto'])
 
-            with col1:
-                matricula_filtro = st.text_input("Filtrar por Matrícula")
+    # ========================
+    # Filtros
+    # ========================
+    with st.expander("🔍 Filtros"):
+        col1, col2, col3, col4 = st.columns(4)
 
-            with col2:
-                tipo_filtro = st.selectbox("Tipo", ["Todos", "Retirada", "Devolução"])
+        with col1:
+            matricula = st.text_input("Filtrar por Matrícula")
 
-            with col3:
-                data_ini = st.date_input("Data Inicial")
+        with col2:
+            tipo = st.selectbox("Tipo de Movimentação", ["Todos", "Retirada", "Devolução"])
 
-            with col4:
-                data_fim = st.date_input("Data Final")
+        with col3:
+            data_ini = st.date_input("Data Inicial")
 
-            codigo_ferramenta = st.text_input("Filtrar por Código da Ferramenta")
+        with col4:
+            data_fim = st.date_input("Data Final")
 
-        df_filtrado = df_mov.copy()
+        cod_ferramenta = st.text_input("Filtrar por Código da Ferramenta")
 
-        if matricula_filtro:
-            df_filtrado = df_filtrado[df_filtrado['Matricula'].astype(str) == matricula_filtro]
+    df_filtrado = df_mov.copy()
 
-        if tipo_filtro != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['Tipo'] == tipo_filtro]
+    if not df_filtrado.empty:
+        if matricula:
+            df_filtrado = df_filtrado[df_filtrado['Matricula'].astype(str) == matricula]
+
+        if tipo != "Todos":
+            df_filtrado = df_filtrado[df_filtrado['Tipo'] == tipo]
 
         if data_ini:
             df_filtrado = df_filtrado[df_filtrado['DataHora'].dt.date >= data_ini]
@@ -51,80 +60,92 @@ def pagina_relatorio():
         if data_fim:
             df_filtrado = df_filtrado[df_filtrado['DataHora'].dt.date <= data_fim]
 
-        if codigo_ferramenta:
-            df_filtrado = df_filtrado[df_filtrado['CodigoFerramenta'].astype(str).str.contains(codigo_ferramenta)]
+        if cod_ferramenta:
+            df_filtrado = df_filtrado[df_filtrado['CodigoFerramenta'].astype(str).str.contains(cod_ferramenta, na=False)]
 
-        # ------------------------------
-        # Resultado do Relatório
-        # ------------------------------
-        st.subheader("📄 Resultado do Relatório")
-        st.dataframe(df_filtrado)
+    # ========================
+    # Resultado
+    # ========================
+    st.subheader("📄 Resultado do Relatório de Movimentações")
+    st.dataframe(df_filtrado)
 
-        st.download_button(
-            label="⬇️ Baixar CSV do Relatório",
-            data=df_filtrado.to_csv(index=False, encoding='utf-8-sig'),
-            file_name="relatorio_movimentacoes.csv",
-            mime="text/csv"
-        )
+    st.download_button(
+        label="⬇️ Baixar CSV do Relatório",
+        data=df_filtrado.to_csv(index=False, encoding='utf-8-sig'),
+        file_name="relatorio_movimentacoes.csv",
+        mime="text/csv"
+    )
 
-        # ------------------------------
-        # Resumo Geral
-        # ------------------------------
-        with st.expander("📊 Resumo Geral"):
-            total_mov = len(df_filtrado)
-            total_retiradas = len(df_filtrado[df_filtrado['Tipo'] == 'Retirada'])
-            total_devolucoes = len(df_filtrado[df_filtrado['Tipo'] == 'Devolução'])
+    # ========================
+    # Resumo Geral
+    # ========================
+    with st.expander("📊 Resumo Geral"):
+        total = len(df_filtrado)
+        retiradas = len(df_filtrado[df_filtrado['Tipo'] == 'Retirada'])
+        devolucoes = len(df_filtrado[df_filtrado['Tipo'] == 'Devolução'])
 
-            st.success(f"**Total de Movimentações:** {total_mov}")
-            st.info(f"**Total de Retiradas:** {total_retiradas}")
-            st.info(f"**Total de Devoluções:** {total_devolucoes}")
+        st.info(f"**Total de Movimentações:** {total}")
+        st.success(f"**Total de Retiradas:** {retiradas}")
+        st.success(f"**Total de Devoluções:** {devolucoes}")
 
-        # ------------------------------
-        # Ferramentas Atualmente Fora
-        # ------------------------------
-        with st.expander("🛠️ Ferramentas Atualmente Fora (Não Devolvidas)"):
-            df_ret = df_mov.copy()
-            ferramentas_status = {}
+    # ========================
+    # Ferramentas Fora (Retiradas e Não Devolvidas)
+    # ========================
+    with st.expander("🛠️ Ferramentas Fora (Não Devolvidas)"):
+        if df_mov.empty:
+            st.success("✅ Todas as ferramentas estão devolvidas.")
+        else:
+            status = {}
 
-            for _, row in df_ret.iterrows():
+            for _, row in df_mov.iterrows():
                 codigo = str(row['CodigoFerramenta'])
-                if codigo:
-                    ferramentas_status[codigo] = {
-                        'Status': row['Tipo'],
-                        'DataHora': row['DataHora'],
-                        'Matricula': row['Matricula'],
-                        'Nome': row['Nome'],
-                        'Descricao': row['DescricaoFerramenta']
-                    }
+                status[codigo] = row['Tipo']
 
-            retiradas = {
-                k: v for k, v in ferramentas_status.items() if v['Status'] == 'Retirada'
-            }
+            retiradas = [cod for cod, tipo in status.items() if tipo == 'Retirada']
 
             if retiradas:
-                st.warning(f"🔴 Total de ferramentas fora: **{len(retiradas)}**")
+                df_retiradas = df_mov[df_mov['CodigoFerramenta'].astype(str).isin(retiradas)]
+                df_ultimas = df_retiradas.sort_values('DataHora').drop_duplicates(subset=['CodigoFerramenta'], keep='last')
 
-                df_exibicao = pd.DataFrame([
-                    {
-                        'Código': cod,
-                        'Descrição': v['Descricao'],
-                        'Data/Hora da Retirada': v['DataHora'],
-                        'Com': f"{v['Nome']} (Matrícula: {v['Matricula']})"
-                    }
-                    for cod, v in retiradas.items()
-                ])
+                df_ultimas = df_ultimas[['CodigoFerramenta', 'DescricaoFerramenta', 'DataHora', 'Nome', 'Matricula']]
+                df_ultimas = df_ultimas.rename(columns={
+                    'CodigoFerramenta': 'Código',
+                    'DescricaoFerramenta': 'Descrição',
+                    'DataHora': 'Data/Hora da Retirada',
+                    'Nome': 'Com',
+                    'Matricula': 'Matrícula'
+                })
 
-                st.dataframe(df_exibicao)
+                st.warning(f"🔴 Total de ferramentas fora: **{len(df_ultimas)}**")
+                st.dataframe(df_ultimas)
 
                 st.download_button(
                     label="⬇️ Baixar CSV das Ferramentas Fora",
-                    data=df_exibicao.to_csv(index=False, encoding='utf-8-sig'),
+                    data=df_ultimas.to_csv(index=False, encoding='utf-8-sig'),
                     file_name="ferramentas_fora.csv",
                     mime="text/csv"
                 )
             else:
                 st.success("✅ Todas as ferramentas estão devolvidas.")
 
-    except Exception as e:
-        st.warning("⚠️ Erro ao carregar os dados.")
-        st.error(e)
+    # ========================
+    # Ferramentas em Conserto
+    # ========================
+    with st.expander("🔧 Ferramentas em Conserto"):
+        if df_ferramentas.empty:
+            st.info("Nenhuma ferramenta cadastrada.")
+        else:
+            df_conserto = df_ferramentas[df_ferramentas['StatusConserto'] == 'Em Conserto']
+            if df_conserto.empty:
+                st.success("✅ Nenhuma ferramenta está em conserto.")
+            else:
+                st.warning(f"🔧 Total em conserto: {len(df_conserto)}")
+                st.dataframe(df_conserto)
+
+                st.download_button(
+                    label="⬇️ Baixar CSV das Ferramentas em Conserto",
+                    data=df_conserto.to_csv(index=False, encoding='utf-8-sig'),
+                    file_name="ferramentas_em_conserto.csv",
+                    mime="text/csv"
+                )
+
