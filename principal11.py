@@ -4,9 +4,7 @@ from datetime import datetime
 import pytz
 import os
 
-# Importações de outras páginas
 from relatorio import pagina_relatorio
-from colaborador import pagina_colaborador  # Chama Colaborador normalmente
 
 # =========================
 # CONFIGURAÇÕES INICIAIS
@@ -129,8 +127,6 @@ ferramentas = carregar_ferramentas()
 # =========================
 # PÁGINAS DO MENU
 # =========================
-
-# >>>>>>>>> MOVIMENTAÇÃO <<<<<<<<<<<
 if menu == "Movimentação":
     st.subheader("📦 Movimentação de Ferramentas")
 
@@ -204,10 +200,7 @@ if menu == "Movimentação":
 
                 st.success("✅ Movimentação registrada com sucesso!")
 
-                resumo = gerar_resumo(
-                    datahora, matricula, nome, tipo, ferramentas_validas,
-                    observacoes if observacoes else "Sem Observações"
-                )
+                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes if observacoes else "Sem Observações")
 
                 st.download_button(
                     label="📄 Baixar Resumo para Impressão",
@@ -216,15 +209,13 @@ if menu == "Movimentação":
                     mime="text/plain"
                 )
 
-# >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
-    pagina_colaborador()
+    st.subheader("👥 Gerenciamento de Colaboradores")
+    st.info("🔧 Página em construção.")
 
-# >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
     st.subheader("🛠️ Gerenciamento de Ferramentas")
     st.info("🔧 Página em construção.")
 
-# >>>>>>>>> RELATÓRIO <<<<<<<<<<<
 elif menu == "Relatório":
     pagina_relatorio()
