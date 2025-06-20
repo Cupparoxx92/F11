@@ -3,16 +3,20 @@ from datetime import datetime
 import pandas as pd
 import pytz
 
-# Fuso horário
+# Configura fuso horário
 fuso = pytz.timezone('America/Sao_Paulo')
 
-# Carregar base de colaboradores
+# Carrega as bases
 try:
     colaboradores = pd.read_csv('colaboradores.csv', encoding='utf-8-sig')
-    colaboradores.columns = colaboradores.columns.str.strip()  # Remove espaços nas colunas
+    colaboradores.columns = colaboradores.columns.str.strip()
+
+    ferramentas = pd.read_csv('ferramentas.csv', encoding='utf-8-sig')
+    ferramentas.columns = ferramentas.columns.str.strip()
 except Exception as e:
-    st.error(f"Erro ao carregar o arquivo de colaboradores: {e}")
+    st.error(f"Erro ao carregar os arquivos: {e}")
     colaboradores = pd.DataFrame(columns=['Matricula', 'Nome'])
+    ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
 
 # Configuração da página
 st.set_page_config(
@@ -21,9 +25,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Título e Menu
+# Título e menu lateral
 st.title("Ferramentaria")
-
 menu = st.sidebar.radio(
     "Menu",
     ["Movimentação", "Colaborador", "Ferramenta", "Relatório"]
@@ -50,11 +53,9 @@ if menu == "Movimentação":
     tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
 
     st.markdown("---")
-
     st.subheader("Ferramentas")
 
-    # Lista de ferramentas
-    ferramentas = []
+    ferramentas_selecionadas = []
 
     qtd_ferramentas = st.number_input(
         "Quantidade de Ferramentas", min_value=1, step=1, value=1
@@ -64,14 +65,20 @@ if menu == "Movimentação":
         with st.expander(f"Ferramenta {i + 1}"):
             col_f1, col_f2 = st.columns(2)
             with col_f1:
-                ferramenta = st.text_input(f"Nome da Ferramenta {i + 1}", key=f"ferramenta_{i}")
+                codigo = st.text_input(f"Código da Ferramenta {i + 1}", key=f"codigo_{i}")
             with col_f2:
-                descricao = st.text_input(f"Descrição {i + 1}", key=f"descricao_{i}")
+                descricao = ""
+                if codigo:
+                    resultado = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
+                    if not resultado.empty:
+                        descricao = resultado['Descricao'].values[0]
+                    else:
+                        descricao = "Código não encontrado"
+                st.text_input(f"Descrição {i + 1}", value=descricao, disabled=True)
 
-            ferramentas.append({"Ferramenta": ferramenta, "Descrição": descricao})
+            ferramentas_selecionadas.append({"Codigo": codigo, "Descricao": descricao})
 
     st.markdown("---")
-
     observacoes = st.text_area("Observações (opcional)")
 
     if st.button("Confirmar Movimentação"):
@@ -90,10 +97,10 @@ if menu == "Movimentação":
         st.write(f"**Observações:** {observacoes}")
 
         st.write("### Ferramentas:")
-        for idx, item in enumerate(ferramentas, start=1):
-            st.write(f"**{idx}. {item['Ferramenta']} - {item['Descrição']}**")
+        for idx, item in enumerate(ferramentas_selecionadas, start=1):
+            st.write(f"**{idx}. {item['Codigo']} - {item['Descricao']}**")
 
-# Outras páginas (em construção)
+# Outras páginas (placeholders)
 elif menu == "Colaborador":
     st.header("Colaborador")
     st.info("Página em construção.")
@@ -105,5 +112,3 @@ elif menu == "Ferramenta":
 elif menu == "Relatório":
     st.header("Relatório")
     st.info("Página em construção.")
-
-
