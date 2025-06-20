@@ -4,9 +4,8 @@ from datetime import datetime
 import pytz
 import os
 
-# Importa as outras páginas
-from relatorio import pagina_relatorio
-from colaborador import pagina_colaborador
+from relatorio import pagina_relatorio  # Importação do relatório
+
 
 # =========================
 # CONFIGURAÇÕES INICIAIS
@@ -31,12 +30,14 @@ arquivo_ferramentas = 'ferramentas.csv'
 # Cabeçalho da movimentação
 cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
 
+
 # =========================
 # FUNÇÕES AUXILIARES
 # =========================
 def inicializar_arquivo_movimentacao():
     if not os.path.exists(arquivo_movimentacao):
         pd.DataFrame(columns=cabecalho).to_csv(arquivo_movimentacao, index=False, encoding='utf-8-sig')
+
 
 def carregar_colaboradores():
     try:
@@ -46,6 +47,7 @@ def carregar_colaboradores():
     except:
         return pd.DataFrame(columns=['Matricula', 'Nome'])
 
+
 def carregar_ferramentas():
     try:
         df = pd.read_csv(arquivo_ferramentas, encoding='utf-8-sig')
@@ -54,6 +56,7 @@ def carregar_ferramentas():
         return df
     except:
         return pd.DataFrame(columns=['Codigo', 'Descricao'])
+
 
 def registrar_movimentacao(matricula, nome, tipo, ferramentas, observacoes):
     inicializar_arquivo_movimentacao()
@@ -72,6 +75,7 @@ def registrar_movimentacao(matricula, nome, tipo, ferramentas, observacoes):
     df.to_csv(arquivo_movimentacao, mode='a', index=False, header=False, encoding='utf-8-sig')
 
     return datahora
+
 
 def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
     resumo = f"""
@@ -94,6 +98,7 @@ def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
     =============================================
     """
     return resumo
+
 
 def ferramenta_disponivel(codigo):
     if not os.path.exists(arquivo_movimentacao):
@@ -120,11 +125,13 @@ menu = st.sidebar.radio(
     ["Movimentação", "Colaborador", "Ferramenta", "Relatório"]
 )
 
+
 # =========================
 # CARREGAMENTO DE DADOS
 # =========================
 colaboradores = carregar_colaboradores()
 ferramentas = carregar_ferramentas()
+
 
 # =========================
 # PÁGINAS DO MENU
@@ -204,7 +211,8 @@ if menu == "Movimentação":
 
                 st.success("✅ Movimentação registrada com sucesso!")
 
-                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes if observacoes else "Sem Observações")
+                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas,
+                                      observacoes if observacoes else "Sem Observações")
 
                 st.download_button(
                     label="📄 Baixar Resumo para Impressão",
@@ -213,14 +221,18 @@ if menu == "Movimentação":
                     mime="text/plain"
                 )
 
+
 # >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
+    from colaborador import pagina_colaborador
     pagina_colaborador()
+
 
 # >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
     st.subheader("🛠️ Gerenciamento de Ferramentas")
     st.info("🔧 Página em construção.")
+
 
 # >>>>>>>>> RELATÓRIO <<<<<<<<<<<
 elif menu == "Relatório":
