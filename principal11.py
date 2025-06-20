@@ -3,30 +3,25 @@ from datetime import datetime
 import pandas as pd
 import pytz
 
-# Definir o fuso horário para horário local (ex.: Brasil)
+# Fuso horário
 fuso = pytz.timezone('America/Sao_Paulo')
 
-# =======================
 # Carregar base de colaboradores
-# =======================
 try:
-    colaboradores = pd.read_csv('colaboradores.csv', encoding='latin1')  # ou utf-8-sig
+    colaboradores = pd.read_csv('colaboradores.csv', encoding='utf-8-sig')
+    colaboradores.columns = colaboradores.columns.str.strip()  # Remove espaços nas colunas
 except Exception as e:
     st.error(f"Erro ao carregar o arquivo de colaboradores: {e}")
     colaboradores = pd.DataFrame(columns=['Matricula', 'Nome'])
 
-# =======================
 # Configuração da página
-# =======================
 st.set_page_config(
     page_title="Ferramentaria",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# =======================
 # Título e Menu
-# =======================
 st.title("Ferramentaria")
 
 menu = st.sidebar.radio(
@@ -34,9 +29,6 @@ menu = st.sidebar.radio(
     ["Movimentação", "Colaborador", "Ferramenta", "Relatório"]
 )
 
-# =======================
-# Página Movimentação
-# =======================
 if menu == "Movimentação":
     st.header("Movimentação")
 
@@ -61,10 +53,9 @@ if menu == "Movimentação":
 
     st.subheader("Ferramentas")
 
-    # Lista para armazenar as ferramentas
+    # Lista de ferramentas
     ferramentas = []
 
-    # Quantidade de ferramentas
     qtd_ferramentas = st.number_input(
         "Quantidade de Ferramentas", min_value=1, step=1, value=1
     )
@@ -81,9 +72,38 @@ if menu == "Movimentação":
 
     st.markdown("---")
 
-    # Observações
     observacoes = st.text_area("Observações (opcional)")
 
-    # =======================
-    # Botão Confirma
+    if st.button("Confirmar Movimentação"):
+        agora = datetime.now(fuso)
+        data_atual = agora.strftime('%d/%m/%Y')
+        hora_atual = agora.strftime('%H:%M:%S')
+
+        st.success("Movimentação registrada com sucesso!")
+
+        st.subheader("Resumo da Movimentação:")
+        st.write(f"**Matrícula:** {matricula}")
+        st.write(f"**Nome:** {nome}")
+        st.write(f"**Tipo de Movimentação:** {tipo}")
+        st.write(f"**Data:** {data_atual}")
+        st.write(f"**Hora:** {hora_atual}")
+        st.write(f"**Observações:** {observacoes}")
+
+        st.write("### Ferramentas:")
+        for idx, item in enumerate(ferramentas, start=1):
+            st.write(f"**{idx}. {item['Ferramenta']} - {item['Descrição']}**")
+
+# Outras páginas (em construção)
+elif menu == "Colaborador":
+    st.header("Colaborador")
+    st.info("Página em construção.")
+
+elif menu == "Ferramenta":
+    st.header("Ferramenta")
+    st.info("Página em construção.")
+
+elif menu == "Relatório":
+    st.header("Relatório")
+    st.info("Página em construção.")
+
 
