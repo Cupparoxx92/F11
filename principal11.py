@@ -69,7 +69,6 @@ def registrar_movimentacao(matricula, nome, tipo, ferramentas, observacoes):
 
     return datahora
 
-
 def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
     resumo = f"""
     =============================================
@@ -91,6 +90,23 @@ def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
     =============================================
     """
     return resumo
+
+def ferramenta_disponivel(codigo):
+    """Verifica se a ferramenta está disponível para retirada"""
+    if not os.path.exists(arquivo_movimentacao):
+        return True  # Se não tem registro, está disponível
+
+    df = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig')
+    df = df[df['Ferramentas'].str.contains(str(codigo), na=False)]
+
+    if df.empty:
+        return True  # Nunca foi movimentada, está disponível
+
+    ultima_mov = df.iloc[-1]  # Pega o último registro dessa ferramenta
+    if 'Retirada' in ultima_mov['Tipo']:
+        return False  # Está fora
+    else:
+        return True  # Está disponível
 
 
 # =========================
@@ -133,6 +149,8 @@ if menu == "Movimentação":
             qtd = st.number_input("Quantidade de Ferramentas", min_value=1, step=1, value=1)
 
         selecionadas = []
+        erro_ferramenta = False  # Flag para impedir envio se tiver erro
+
         for i in range(qtd):
             with st.expander(f"Ferramenta {i + 1}"):
                 codigo = st.text_input(f"Código da Ferramenta {i + 1}", key=f"cod_{i}")
@@ -141,6 +159,14 @@ if menu == "Movimentação":
                     df_ferr = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
                     if not df_ferr.empty:
                         desc = df_ferr['Descricao'].values[0]
+
+                        # Verificar disponibilidade da ferramenta
+                        if tipo == "Retirada":
+                            if not ferramenta_disponivel(codigo):
+                                st.error(f"⚠️ A ferramenta {codigo} - {desc} já está retirada! Faça a devolução antes.")
+                                erro_ferramenta = True
+                                desc = ""
+
                 st.text_input(f"Descrição {i + 1}", value=desc, disabled=True, key=f"desc_{i}")
                 selecionadas.append((codigo, desc))
 
@@ -156,6 +182,8 @@ if menu == "Movimentação":
     if submit:
         if not nome:
             st.error("⚠️ Informe uma matrícula válida antes de registrar.")
+        elif erro_ferramenta:
+            st.error("⚠️ Corrija os erros nas ferramentas antes de registrar.")
         else:
             ferramentas_validas = [(c, d) for c, d in selecionadas if c and d]
             if not ferramentas_validas:
