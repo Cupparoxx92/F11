@@ -4,7 +4,6 @@ from datetime import datetime
 import pytz
 import os
 
-# Importa o relatório
 from relatorio import pagina_relatorio
 
 # =========================
@@ -110,6 +109,7 @@ def ferramenta_disponivel(codigo):
     else:
         return True
 
+
 # =========================
 # MENU LATERAL
 # =========================
@@ -127,22 +127,20 @@ ferramentas = carregar_ferramentas()
 # =========================
 # PÁGINAS DO MENU
 # =========================
-
 if menu == "Movimentação":
     st.subheader("📦 Movimentação de Ferramentas")
 
-    with st.form("formulario"):
-
+    with st.form("formulario", clear_on_submit=False):
         col1, col2 = st.columns(2)
 
         with col1:
-            matricula = st.text_input("Matrícula")
+            matricula = st.text_input("Matrícula", key="matricula")
             nome = ""
             if matricula:
                 df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
                 if not df_col.empty:
                     nome = df_col['Nome'].values[0]
-            st.text_input("Nome", value=nome, disabled=True)
+            st.text_input("Nome", value=nome, disabled=True, key="nome")
 
         with col2:
             tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
@@ -169,15 +167,15 @@ if menu == "Movimentação":
                 st.text_input(f"Descrição {i + 1}", value=desc, disabled=True, key=f"desc_{i}")
                 selecionadas.append((codigo, desc))
 
-        observacoes = st.text_area("Observações (opcional)")
-        sem_obs = st.checkbox("✔️ Sem Observações")
+        observacoes = st.text_area("Observações (opcional)", key="observacoes")
+        sem_obs = st.checkbox("✔️ Sem Observações", key="semobs")
 
         col3, col4 = st.columns([1, 5])
         submit = col3.form_submit_button("✅ Confirmar Movimentação")
         limpar = col4.form_submit_button("🧹 Limpar")
 
     if limpar:
-        st.rerun()
+        st.experimental_rerun()
 
     if submit:
         if not nome:
@@ -202,7 +200,7 @@ if menu == "Movimentação":
 
                 st.success("✅ Movimentação registrada com sucesso!")
 
-                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes)
+                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes if observacoes else "Sem Observações")
 
                 st.download_button(
                     label="📄 Baixar Resumo para Impressão",
@@ -221,4 +219,3 @@ elif menu == "Ferramenta":
 
 elif menu == "Relatório":
     pagina_relatorio()
-
