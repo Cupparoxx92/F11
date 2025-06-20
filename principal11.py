@@ -4,9 +4,8 @@ from datetime import datetime
 import pytz
 import os
 
-# Importando o relatório
+# Importa o relatório
 from relatorio import pagina_relatorio
-
 
 # =========================
 # CONFIGURAÇÕES INICIAIS
@@ -96,7 +95,6 @@ def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
     return resumo
 
 def ferramenta_disponivel(codigo):
-    """Verifica se a ferramenta está disponível para retirada"""
     if not os.path.exists(arquivo_movimentacao):
         return True
 
@@ -111,7 +109,6 @@ def ferramenta_disponivel(codigo):
         return False
     else:
         return True
-
 
 # =========================
 # MENU LATERAL
@@ -131,7 +128,6 @@ ferramentas = carregar_ferramentas()
 # PÁGINAS DO MENU
 # =========================
 
-# >>>>>>>>> MOVIMENTAÇÃO <<<<<<<<<<<
 if menu == "Movimentação":
     st.subheader("📦 Movimentação de Ferramentas")
 
@@ -174,7 +170,7 @@ if menu == "Movimentação":
                 selecionadas.append((codigo, desc))
 
         observacoes = st.text_area("Observações (opcional)")
-        sem_observacao = st.checkbox("✅ Sem Observações")
+        sem_obs = st.checkbox("✔️ Sem Observações")
 
         col3, col4 = st.columns([1, 5])
         submit = col3.form_submit_button("✅ Confirmar Movimentação")
@@ -188,26 +184,25 @@ if menu == "Movimentação":
             st.error("⚠️ Informe uma matrícula válida antes de registrar.")
         elif erro_ferramenta:
             st.error("⚠️ Corrija os erros nas ferramentas antes de registrar.")
-        elif not observacoes and not sem_observacao:
-            st.error("⚠️ Preencha o campo Observações ou marque 'Sem Observações'.")
+        elif not observacoes and not sem_obs:
+            st.error("⚠️ Preencha Observações ou marque 'Sem Observações'.")
         else:
             ferramentas_validas = [(c, d) for c, d in selecionadas if c and d]
             if not ferramentas_validas:
                 st.error("⚠️ Informe pelo menos uma ferramenta válida antes de registrar.")
             else:
-                obs_final = observacoes if observacoes else "Sem Observações"
                 ferramentas_str = "; ".join([f"{c} - {d}" for c, d in ferramentas_validas])
                 datahora = registrar_movimentacao(
                     matricula=matricula,
                     nome=nome,
                     tipo=tipo,
                     ferramentas=ferramentas_str,
-                    observacoes=obs_final
+                    observacoes=observacoes if observacoes else "Sem Observações"
                 )
 
                 st.success("✅ Movimentação registrada com sucesso!")
 
-                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, obs_final)
+                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes)
 
                 st.download_button(
                     label="📄 Baixar Resumo para Impressão",
@@ -216,11 +211,14 @@ if menu == "Movimentação":
                     mime="text/plain"
                 )
 
-# >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
     st.subheader("👥 Gerenciamento de Colaboradores")
     st.info("🔧 Página em construção.")
 
-# >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
-    st.subheader("🛠️ Gerenci
+    st.subheader("🛠️ Gerenciamento de Ferramentas")
+    st.info("🔧 Página em construção.")
+
+elif menu == "Relatório":
+    pagina_relatorio()
+
