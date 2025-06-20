@@ -4,21 +4,17 @@ import os
 
 
 # =========================
-# ARQUIVO DE FERRAMENTAS
-# =========================
-arquivo_ferramentas = 'ferramentas.csv'
-cabecalho = ['Codigo', 'Descricao', 'Status']  # Status pode ser 'Disponível' ou 'Em Conserto'
-
-
-# =========================
 # FUNÇÕES AUXILIARES
 # =========================
+arquivo_ferramentas = 'ferramentas.csv'
+
 def carregar_ferramentas():
     if os.path.exists(arquivo_ferramentas):
         df = pd.read_csv(arquivo_ferramentas, encoding='utf-8-sig')
-        df.columns = df.columns.str.strip()
     else:
-        df = pd.DataFrame(columns=cabecalho)
+        df = pd.DataFrame(columns=['Codigo', 'Descricao', 'StatusConserto'])
+    if 'StatusConserto' not in df.columns:
+        df['StatusConserto'] = 'Disponível'
     return df
 
 
@@ -34,74 +30,85 @@ def pagina_ferramenta():
 
     df = carregar_ferramentas()
 
-    # ------------------------------
-    # Bloco 1 - Cadastro de Ferramentas
-    # ------------------------------
-    st.markdown("### ➕ Cadastrar Nova Ferramenta")
-    with st.form("cadastro_ferramenta"):
-        col1, col2 = st.columns(2)
-        with col1:
-            codigo = st.text_input("Código da Ferramenta")
-        with col2:
-            descricao = st.text_input("Descrição da Ferramenta")
+    menu = st.radio("Escolha uma opção:", ["Cadastrar", "Editar", "Conserto", "Pesquisar"])
 
-        cadastrar = st.form_submit_button("✅ Cadastrar")
+    # >>>>> CADASTRAR <<<<<
+    if menu == "Cadastrar":
+        st.subheader("➕ Cadastrar Nova Ferramenta")
+
+        with st.form("form_cadastro"):
+            codigo = st.text_input("Código da Ferramenta")
+            descricao = st.text_input("Descrição")
+            cadastrar = st.form_submit_button("Cadastrar")
 
         if cadastrar:
             if codigo and descricao:
                 if codigo in df['Codigo'].astype(str).values:
                     st.warning("⚠️ Código já cadastrado!")
                 else:
-                    novo = pd.DataFrame([[codigo, descricao, 'Disponível']], columns=cabecalho)
-                    df = pd.concat([df, novo], ignore_index=True)
+                    df.loc[len(df)] = [codigo, descricao, 'Disponível']
                     salvar_ferramentas(df)
                     st.success("✅ Ferramenta cadastrada com sucesso!")
             else:
-                st.warning("⚠️ Preencha todos os campos.")
+                st.error("⚠️ Preencha todos os campos!")
 
-    # ------------------------------
-    # Bloco 2 - Edição e Exclusão
-    # ------------------------------
-    st.markdown("### ✏️ Editar ou 🗑️ Excluir Ferramenta")
-    busca = st.text_input("🔍 Buscar por Código ou Descrição")
+    # >>>>> EDITAR <<<<<
+    elif menu == "Editar":
+        st.subheader("✏️ Editar Ferramenta")
 
-    filtro = df[df['Codigo'].astype(str).str.contains(busca, na=False) | df['Descricao'].str.contains(busca, na=False)]
+        codigo = st.text_input("Digite o Código da Ferramenta para editar")
 
-    st.dataframe(filtro)
+        if codigo:
+            ferramenta = df[df['Codigo'].astype(str) == codigo]
+            if not ferramenta.empty:
+                index = ferramenta.index[0]
+                nova_desc = st.text_input("Nova Descrição", value=ferramenta['Descricao'].values[0])
 
-    if not filtro.empty:
-        cod_editar = st.selectbox("Selecione o Código da Ferramenta para editar ou excluir", filtro['Codigo'].tolist())
+                if st.button("Salvar Alterações"):
+                    df.at[index, 'Descricao'] = nova_desc
+                    salvar_ferramentas(df)
+                    st.success("✅ Ferramenta atualizada!")
+            else:
+                st.warning("⚠️ Código não encontrado!")
 
-        ferramenta = df[df['Codigo'].astype(str) == str(cod_editar)]
-        if not ferramenta.empty:
-            nova_desc = st.text_input("Editar Descrição", ferramenta['Descricao'].values[0])
-            novo_status = st.selectbox("Status", ['Disponível', 'Em Conserto'], index=0 if ferramenta['Status'].values[0] == 'Disponível' else 1)
+    # >>>>> CONSERTO <<<<<
+    elif menu == "Conserto":
+        st.subheader("🛠️ Gerenciar Conserto")
 
-            col1, col2 = st.columns(2)
-            editar = col1.button("💾 Salvar Alterações")
-            excluir = col2.button("🗑️ Excluir Ferramenta")
+        codigo = st.text_input("Código da Ferramenta para Conserto")
 
-            if editar:
-                df.loc[df['Codigo'].astype(str) == str(cod_editar), 'Descricao'] = nova_desc
-                df.loc[df['Codigo'].astype(str) == str(cod_editar), 'Status'] = novo_status
-                salvar_ferramentas(df)
-                st.success("✅ Alterações salvas com sucesso!")
+        if codigo:
+            ferramenta = df[df['Codigo'].astype(str) == codigo]
+            if not ferramenta.empty:
+                index = ferramenta.index[0]
+                status = ferramenta['StatusConserto'].values[0]
 
-            if excluir:
-                df = df[df['Codigo'].astype(str) != str(cod_editar)]
-                salvar_ferramentas(df)
-                st.success("🗑️ Ferramenta excluída com sucesso!")
+                st.info(f"Status atual: **{status}**")
 
-    # ------------------------------
-    # Bloco 3 - Relatório Completo
-    # ------------------------------
-    st.markdown("### 📋 Relatório Completo de Ferramentas")
-    st.dataframe(df)
+                if status == "Em Conserto":
+                    if st.button("🔧 Retirar do Conserto"):
+                        df.at[index, 'StatusConserto'] = "Disponível"
+                        salvar_ferramentas(df)
+                        st.success("✅ Ferramenta disponível novamente!")
+                else:
+                    if st.button("🛠️ Colocar em Conserto"):
+                        df.at[index, 'StatusConserto'] = "Em Conserto"
+                        salvar_ferramentas(df)
+                        st.success("✅ Ferramenta marcada como em conserto!")
+            else:
+                st.warning("⚠️ Código não encontrado!")
 
-    st.download_button(
-        label="⬇️ Baixar CSV de Ferramentas",
-        data=df.to_csv(index=False, encoding='utf-8-sig'),
-        file_name="relatorio_ferramentas.csv",
-        mime="text/csv"
-    )
+    # >>>>> PESQUISAR <<<<<
+    elif menu == "Pesquisar":
+        st.subheader("🔍 Pesquisar Ferramenta")
 
+        busca = st.text_input("Digite código ou nome para buscar")
+
+        if busca:
+            filtro = df[
+                df['Codigo'].astype(str).str.contains(busca, na=False, case=False) |
+                df['Descricao'].str.contains(busca, na=False, case=False)
+            ]
+            st.dataframe(filtro)
+        else:
+            st.dataframe(df)
