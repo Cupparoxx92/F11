@@ -5,6 +5,7 @@ import pytz
 import os
 
 from relatorio import pagina_relatorio
+from colaborador import pagina_colaborador  # <-- Importando colaborador.py
 
 # =========================
 # CONFIGURAÇÕES INICIAIS
@@ -200,7 +201,10 @@ if menu == "Movimentação":
 
                 st.success("✅ Movimentação registrada com sucesso!")
 
-                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes if observacoes else "Sem Observações")
+                resumo = gerar_resumo(
+                    datahora, matricula, nome, tipo, ferramentas_validas,
+                    observacoes if observacoes else "Sem Observações"
+                )
 
                 st.download_button(
                     label="📄 Baixar Resumo para Impressão",
@@ -209,13 +213,21 @@ if menu == "Movimentação":
                     mime="text/plain"
                 )
 
+# =========================
+# COLABORADOR
+# =========================
 elif menu == "Colaborador":
-    st.subheader("👥 Gerenciamento de Colaboradores")
-    st.info("🔧 Página em construção.")
+    pagina_colaborador()
 
+# =========================
+# FERRAMENTA
+# =========================
 elif menu == "Ferramenta":
     st.subheader("🛠️ Gerenciamento de Ferramentas")
-    st.info("🔧 Página em construção.")
+    st.info("🔧 Página em construção. (Se quiser eu te ajudo a montar!)")
 
+# =========================
+# RELATÓRIO
+# =========================
 elif menu == "Relatório":
     pagina_relatorio()
