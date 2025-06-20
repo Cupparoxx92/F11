@@ -36,13 +36,18 @@ def pagina_colaborador():
                     st.warning("⚠️ Preencha todos os campos.")
 
     if aba == "🔍 Consultar Colaborador":
-        st.subheader("🔍 Consultar por Matrícula")
-        busca = st.text_input("Digite a matrícula para consultar")
+        st.subheader("🔍 Consultar por Matrícula ou Nome")
+        busca = st.text_input("Digite a matrícula ou nome para consultar").strip()
 
         if busca:
-            resultado = df_colab[df_colab['Matricula'].astype(str) == busca]
+            resultado = df_colab[
+                (df_colab['Matricula'].astype(str).str.contains(busca, case=False)) |
+                (df_colab['Nome'].str.contains(busca, case=False, na=False))
+            ]
+
             if not resultado.empty:
-                nome = resultado['Nome'].values[0]
-                st.info(f"👤 Nome: **{nome}**")
+                for idx, row in resultado.iterrows():
+                    st.info(f"👤 Matrícula: **{row['Matricula']}**\n\n📛 Nome: **{row['Nome']}**")
             else:
-                st.warning("⚠️ Matrícula não encontrada.")
+                st.warning("⚠️ Nenhum colaborador encontrado com essa matrícula ou nome.")
+
