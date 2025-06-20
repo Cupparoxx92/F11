@@ -51,61 +51,51 @@ menu = st.sidebar.radio(
 if menu == "Movimentação":
     st.header("Movimentação")
 
-    # Formulário com reset automático
-    with st.form("movimentacao_form", clear_on_submit=True):
-        # Matrícula e lookup de nome
-        matricula = st.text_input("Matrícula")
+    # Formulário com clear_on_submit
+    with st.form("form_mov", clear_on_submit=True):
+        matricula = st.text_input("Matrícula", key="matricula")
         nome = ""
         if matricula:
             df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
-            nome = df_col['Nome'].values[0] if not df_col.empty else ""
+            if not df_col.empty:
+                nome = df_col['Nome'].values[0]
         st.text_input("Nome", value=nome, disabled=True)
 
-        # Tipo de movimentação
-        tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
-
-        # Quantidade de Ferramentas
-        qtd = st.number_input("Quantidade de Ferramentas", min_value=1, value=1, step=1)
+        tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"], key="tipo")
+        qtd = st.number_input("Quantidade de Ferramentas", min_value=1, value=1, step=1, key="qtd")
 
         selecionadas = []
-        for i in range(qtd):
+        for i in range(st.session_state.qtd):
             with st.expander(f"Ferramenta {i+1}"):
-                codigo = st.text_input(f"Código da Ferramenta {i+1}")
+                codigo = st.text_input(f"Código da Ferramenta {i+1}", key=f"cod{i}")
                 desc = ""
                 if codigo:
                     df_f = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
-                    desc = df_f['Descricao'].values[0] if not df_f.empty else ""
-                st.text_input(f"Descrição {i+1}", value=desc, disabled=True)
+                    if not df_f.empty:
+                        desc = df_f['Descricao'].values[0]
+                st.text_input(f"Descrição {i+1}", value=desc, disabled=True, key=f"desc{i}")
                 selecionadas.append((codigo, desc))
 
-        # Observações
-        observacoes = st.text_area("Observações (opcional)")
+        observacoes = st.text_area("Observações (opcional)", key="obs")
+        submit = st.form_submit_button("Confirmar Movimentação")
 
-        # Botão de submit
-        submitted = st.form_submit_button("Confirmar Movimentação")
-
-        if submitted:
-            # Validações
-            if not matricula or not nome:
+        if submit:
+            # Somente após clicar aparecerão erros
+            if not nome:
                 st.error("Informe uma matrícula válida antes de registrar.")
             else:
-                valid_tools = [f for f in selecionadas if f[0] and f[1]]
-                if not valid_tools:
+                valid = [(c,d) for c,d in selecionadas if c and d]
+                if not valid:
                     st.error("Informe pelo menos uma ferramenta válida antes de registrar.")
                 else:
-                    # 1) Salvar em CSV (append)
                     agora = datetime.now(fuso)
                     datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
-                    ferramentas_str = "; ".join(f"{c} - {d}" for c, d in valid_tools)
-                    new_row = [datahora, matricula, nome, tipo, ferramentas_str, observacoes]
+                    tools_str = "; ".join(f"{c} - {d}" for c,d in valid)
+                    row = [datahora, matricula, nome, tipo, tools_str, observacoes]
                     with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
                         writer = csv.writer(f)
-                        writer.writerow(new_row)
+                        writer.writerow(row)
                     st.success("Movimentação registrada com sucesso!")
-
-elif menu == "Relatório":
-    st.header("Relatório")
-    st.info("Esta página está desativada.")
 
 elif menu == "Colaborador":
     st.header("Colaborador")
@@ -114,3 +104,7 @@ elif menu == "Colaborador":
 elif menu == "Ferramenta":
     st.header("Ferramenta")
     st.info("Página em construção.")
+
+elif menu == "Relatório":
+    st.header("Relatório")
+    st.info("Esta página está desativada.")
