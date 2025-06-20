@@ -93,6 +93,39 @@ if menu == "Movimentação":
                         writer.writerow(row)
                     st.success("Movimentação registrada com sucesso!")
 
+                    # Gerar arquivo de impressão
+                    resumo = f"""
+                    ============================================
+                              RESUMO DE MOVIMENTAÇÃO
+                    ============================================
+                    Data/Hora: {datahora}
+                    Nome: {nome}
+                    Matrícula: {matricula}
+                    Tipo: {tipo}
+
+                    Ferramentas:
+                    """
+                    for c, d in valid:
+                        resumo += f" - {c} - {d}\n"
+
+                    resumo += f"""
+                    \nObservações: {observacoes}
+                    \n\nAssinatura: ____________________________________________
+                    ============================================
+                    """
+
+                    with open("resumo_movimentacao.txt", "w", encoding="utf-8-sig") as file:
+                        file.write(resumo)
+
+                    with open("resumo_movimentacao.txt", "r", encoding="utf-8-sig") as file:
+                        conteudo = file.read()
+                        st.download_button(
+                            label="📄 Baixar Resumo para Impressão",
+                            data=conteudo,
+                            file_name=f"resumo_{matricula}_{agora.strftime('%Y%m%d%H%M%S')}.txt",
+                            mime="text/plain"
+                        )
+
 elif menu == "Colaborador":
     st.header("Colaborador")
     st.info("Página em construção.")
@@ -100,4 +133,3 @@ elif menu == "Colaborador":
 elif menu == "Ferramenta":
     st.header("Ferramenta")
     st.info("Página em construção.")
-
