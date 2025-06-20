@@ -5,12 +5,10 @@ import pytz
 import os
 import csv
 
-# ———————————————————————————————
 # Fuso horário
 fuso = pytz.timezone('America/Sao_Paulo')
 
-# ———————————————————————————————
-# Carregar arquivos
+# Dados dos arquivos
 try:
     colaboradores = pd.read_csv('colaboradores.csv', encoding='utf-8-sig')
     colaboradores.columns = colaboradores.columns.str.strip()
@@ -24,24 +22,24 @@ try:
 except:
     ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
 
-# Arquivo de movimentações
+# Arquivo movimentação
 mov_file = 'movimentacao.csv'
 if not os.path.exists(mov_file):
     pd.DataFrame(columns=['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']).to_csv(mov_file, index=False, encoding='utf-8-sig')
 
-# ———————————————————————————————
 # Configuração da página
 st.set_page_config(page_title="Ferramentaria", layout="wide")
 st.title("Ferramentaria")
 
-# Menu lateral
 menu = st.sidebar.radio("Menu", ["Movimentação", "Colaborador", "Ferramenta"])
 
-# Variável de controle
-gerar_resumo = False
-resumo_arquivo = ""
+# Variável de controle no session_state
+if 'gerar_resumo' not in st.session_state:
+    st.session_state.gerar_resumo = False
+    st.session_state.resumo_arquivo = ""
+    st.session_state.matricula_atual = ""
 
-# ———————————————————————————————
+# MOVIMENTAÇÃO
 if menu == "Movimentação":
     st.header("Movimentação")
 
@@ -87,15 +85,15 @@ if menu == "Movimentação":
 
                     row = [datahora, matricula, nome, tipo, tools_str, observacoes]
 
-                    # Gravar no CSV
+                    # Registrar no CSV
                     with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
                         writer = csv.writer(f)
                         writer.writerow(row)
 
                     st.success("Movimentação registrada com sucesso!")
 
-                    # Gerar o resumo para impressão
-                    resumo_arquivo = f"""
+                    # Gerar resumo
+                    resumo = f"""
 ============================================
             RESUMO DE MOVIMENTAÇÃO
 ============================================
@@ -107,9 +105,9 @@ Tipo: {tipo}
 Ferramentas:
 """
                     for c, d in valid:
-                        resumo_arquivo += f" - {c} - {d}\n"
+                        resumo += f" - {c} - {d}\n"
 
-                    resumo_arquivo += f"""
+                    resumo += f"""
 Observações: {observacoes}
 
 Assinatura: ____________________________________________
@@ -117,23 +115,16 @@ Assinatura: ____________________________________________
 ============================================
                     """
 
-                    gerar_resumo = True
+                    st.session_state.gerar_resumo = True
+                    st.session_state.resumo_arquivo = resumo
+                    st.session_state.matricula_atual = matricula
 
-    # ———————————————————————————————
-    # Exibir botão de download APENAS após o registro
-    if gerar_resumo and resumo_arquivo:
-        st.download_button(
-            label="📄 Baixar Resumo para Impressão",
-            data=resumo_arquivo,
-            file_name=f"resumo_{matricula}_{datetime.now(fuso).strftime('%Y%m%d%H%M%S')}.txt",
-            mime="text/plain"
-        )
+# Download aparece apenas após confirmar
+if st.session_state.get('gerar_resumo'):
+    st.download_button(
+        label="📄 Baixar Resumo para Impressão",
+        data=st.session_state.resumo_arquivo,
+        file_name=f"resumo_{st.session_state.matricula_atual}_{datetime.now(fuso).strftime('%Y%m%d%H%M%S')}.txt",
+        mime="text/plain"
+    )
 
-# ———————————————————————————————
-elif menu == "Colaborador":
-    st.header("Colaborador")
-    st.info("Página em construção.")
-
-elif menu == "Ferramenta":
-    st.header("Ferramenta")
-    st.info("Página em construção.")
