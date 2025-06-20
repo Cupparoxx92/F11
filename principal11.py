@@ -225,8 +225,8 @@ if menu == "Movimentação":
 
 # >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
-    from colaborador import pagina_colaborador
     pagina_colaborador()
+
 
 
 # >>>>>>>>> FERRAMENTA <<<<<<<<<<<
