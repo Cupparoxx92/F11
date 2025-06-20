@@ -15,16 +15,16 @@ try:
     colaboradores.columns = colaboradores.columns.str.strip()
 except Exception as e:
     st.error(f"Erro ao ler 'colaboradores.csv': {e}")
-    colaboradores = pd.DataFrame(columns=['Matricula','Nome'])
+    colaboradores = pd.DataFrame(columns=['Matricula', 'Nome'])
 
 # 3) Carregar e normalizar ferramentas
 try:
     ferramentas = pd.read_csv('ferramentas.csv', encoding='utf-8-sig')
     ferramentas.columns = ferramentas.columns.str.strip()
-    ferramentas.rename(columns={'Descrição':'Descricao'}, inplace=True)
+    ferramentas.rename(columns={'Descrição': 'Descricao'}, inplace=True)
 except Exception as e:
     st.error(f"Erro ao ler 'ferramentas.csv': {e}")
-    ferramentas = pd.DataFrame(columns=['Codigo','Descricao'])
+    ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
 
 # ——————————————————————————————————————————————————————————————
 # Configuração geral da página
@@ -33,6 +33,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
 st.title("Ferramentaria")
 
 # Menu lateral
@@ -91,12 +92,12 @@ if menu == "Movimentação":
 
     # Confirmar botão
     if st.button("Confirmar Movimentação"):
-        # Ação 1) Salvar em CSV
+        # 1) Salvar em CSV
         agora = datetime.now(fuso)
         datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
-        ferramentas_str = "; ".join(f"{c} - {d}" for c,d in selecionadas)
+        ferramentas_str = "; ".join(f"{c} - {d}" for c, d in selecionadas)
         file_path = 'movimentacoes.csv'
-        header = ['DataHora','Matricula','Nome','Tipo','Ferramentas','Observacoes']
+        header = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
         new_row = [datahora, matricula, nome, tipo, ferramentas_str, observacoes]
         write_header = not os.path.exists(file_path)
         with open(file_path, 'a', newline='', encoding='utf-8-sig') as f:
@@ -105,14 +106,8 @@ if menu == "Movimentação":
                 writer.writerow(header)
             writer.writerow(new_row)
 
-        # Ação 2) Limpar formulário
-        st.session_state['matricula'] = ""
-        st.session_state['tipo'] = "Retirada"
-        st.session_state['qtd_ferramentas'] = 1
-        st.session_state['observacoes'] = ""
-        for i in range(len(selecionadas)):
-            st.session_state[f'codigo_{i}'] = ""
-            st.session_state[f'descricao_{i}'] = ""
+        # 2) Limpar formulário reiniciando a app
+        st.experimental_rerun()
 
 # ——————————————————————————————————————————————————————————————
 elif menu == "Relatório":
