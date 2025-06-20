@@ -174,6 +174,7 @@ if menu == "Movimentação":
                 selecionadas.append((codigo, desc))
 
         observacoes = st.text_area("Observações (opcional)")
+        sem_observacao = st.checkbox("✅ Sem Observações")
 
         col3, col4 = st.columns([1, 5])
         submit = col3.form_submit_button("✅ Confirmar Movimentação")
@@ -187,23 +188,26 @@ if menu == "Movimentação":
             st.error("⚠️ Informe uma matrícula válida antes de registrar.")
         elif erro_ferramenta:
             st.error("⚠️ Corrija os erros nas ferramentas antes de registrar.")
+        elif not observacoes and not sem_observacao:
+            st.error("⚠️ Preencha o campo Observações ou marque 'Sem Observações'.")
         else:
             ferramentas_validas = [(c, d) for c, d in selecionadas if c and d]
             if not ferramentas_validas:
                 st.error("⚠️ Informe pelo menos uma ferramenta válida antes de registrar.")
             else:
+                obs_final = observacoes if observacoes else "Sem Observações"
                 ferramentas_str = "; ".join([f"{c} - {d}" for c, d in ferramentas_validas])
                 datahora = registrar_movimentacao(
                     matricula=matricula,
                     nome=nome,
                     tipo=tipo,
                     ferramentas=ferramentas_str,
-                    observacoes=observacoes
+                    observacoes=obs_final
                 )
 
                 st.success("✅ Movimentação registrada com sucesso!")
 
-                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes)
+                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, obs_final)
 
                 st.download_button(
                     label="📄 Baixar Resumo para Impressão",
@@ -219,9 +223,4 @@ elif menu == "Colaborador":
 
 # >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
-    st.subheader("🛠️ Gerenciamento de Ferramentas")
-    st.info("🔧 Página em construção.")
-
-# >>>>>>>>> RELATÓRIO <<<<<<<<<<<
-elif menu == "Relatório":
-    pagina_relatorio()
+    st.subheader("🛠️ Gerenci
