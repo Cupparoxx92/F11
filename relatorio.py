@@ -17,6 +17,9 @@ def pagina_relatorio():
         df_mov = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig')
         df_mov['DataHora'] = pd.to_datetime(df_mov['DataHora'], format='%d/%m/%Y %H:%M:%S')
 
+        # ------------------------------
+        # Bloco de Filtros
+        # ------------------------------
         with st.expander("🔍 Filtros"):
             col1, col2, col3, col4 = st.columns(4)
 
@@ -51,6 +54,9 @@ def pagina_relatorio():
         if codigo_ferramenta:
             df_filtrado = df_filtrado[df_filtrado['Ferramentas'].str.contains(codigo_ferramenta, na=False)]
 
+        # ------------------------------
+        # Resultado do Relatório
+        # ------------------------------
         st.subheader("📄 Resultado do Relatório")
         st.dataframe(df_filtrado)
 
@@ -61,6 +67,9 @@ def pagina_relatorio():
             mime="text/csv"
         )
 
+        # ------------------------------
+        # Resumo Geral
+        # ------------------------------
         with st.expander("📊 Resumo Geral"):
             total_mov = len(df_filtrado)
             total_retiradas = len(df_filtrado[df_filtrado['Tipo'] == 'Retirada'])
@@ -70,6 +79,9 @@ def pagina_relatorio():
             st.info(f"**Total de Retiradas:** {total_retiradas}")
             st.info(f"**Total de Devoluções:** {total_devolucoes}")
 
+        # ------------------------------
+        # Ferramentas Atualmente Fora
+        # ------------------------------
         with st.expander("🛠️ Ferramentas Atualmente Fora (Não Devolvidas)"):
             df_ret = df_mov.copy()
             ferramentas_status = {}
@@ -79,15 +91,41 @@ def pagina_relatorio():
                 for item in itens:
                     cod = item.strip().split('-')[0].strip()
                     if cod:
-                        ferramentas_status[cod] = row['Tipo']
+                        ferramentas_status[cod] = {
+                            'Status': row['Tipo'],
+                            'DataHora': row['DataHora'],
+                            'Matricula': row['Matricula'],
+                            'Nome': row['Nome']
+                        }
 
-            retiradas = [k for k, v in ferramentas_status.items() if v == 'Retirada']
+            retiradas = {
+                k: v for k, v in ferramentas_status.items() if v['Status'] == 'Retirada'
+            }
 
             if retiradas:
                 st.warning(f"🔴 Total de ferramentas fora: **{len(retiradas)}**")
-                st.write(retiradas)
+
+                df_exibicao = pd.DataFrame([
+                    {
+                        'Código': cod,
+                        'Data/Hora da Retirada': v['DataHora'],
+                        'Com': f"{v['Nome']} (Matrícula: {v['Matricula']})"
+                    }
+                    for cod, v in retiradas.items()
+                ])
+
+                st.dataframe(df_exibicao)
+
+                st.download_button(
+                    label="⬇️ Baixar CSV das Ferramentas Fora",
+                    data=df_exibicao.to_csv(index=False, encoding='utf-8-sig'),
+                    file_name="ferramentas_fora.csv",
+                    mime="text/csv"
+                )
             else:
                 st.success("✅ Todas as ferramentas estão devolvidas.")
 
-    except:
-        st.warning("⚠️ Nenhuma movimentação registrada ainda.")
+    except Exception as e:
+        st.warning("⚠️ Erro ao carregar os dados.")
+        st.error(e)
+
