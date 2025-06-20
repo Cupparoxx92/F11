@@ -4,41 +4,39 @@ import streamlit as st
 st.set_page_config(
     page_title="Ferramentaria",
     layout="wide",
-    initial_sidebar_state="expanded"  # Garante que o menu lateral fique sempre visível
+    initial_sidebar_state="expanded"
 )
 
 # Título da aplicação
 st.title("Ferramentaria")
 
-# Inicializa estado de página
-if 'page' not in st.session_state:
-    st.session_state.page = None
-
 # Menu lateral
 st.sidebar.title("Menu")
 
-# Botões do menu definem o branch a ser exibido
+# Ação de cada botão do menu
 if st.sidebar.button("Movimentação"):
-    st.session_state.page = 'movimentacao'
-if st.sidebar.button("Colaborador"):
-    st.session_state.page = 'colaborador'
-if st.sidebar.button("Ferramenta"):
-    st.session_state.page = 'ferramenta'
-if st.sidebar.button("Relatorio"):
-    st.session_state.page = 'relatorio'
+    # Abre modal com campos de Movimentação
+    with st.modal("Movimentação"):
+        st.markdown("Preencha os dados abaixo:")
+        matricula = st.text_input("Matrícula")
+        nome = st.text_input("Nome", value="", disabled=True)
+        ferramenta = st.text_input("Ferramenta")
+        descricao = st.text_input("Descrição", value="", disabled=True)
+        tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
+        if st.button("Confirmar", key="confirm_movimentacao"):
+            st.success(f"Movimentação registrada: {tipo} - Matrícula: {matricula} - Ferramenta: {ferramenta}")
 
-# Roteamento para cada branch
-if st.session_state.page == 'movimentacao':
-    st.header("Movimentação")
-    st.write("Você foi direcionado para o branch Movimentação.")
-elif st.session_state.page == 'colaborador':
+elif st.sidebar.button("Colaborador"):
     st.header("Colaborador")
     st.write("Você foi direcionado para o branch Colaborador.")
-elif st.session_state.page == 'ferramenta':
+
+elif st.sidebar.button("Ferramenta"):
     st.header("Ferramenta")
     st.write("Você foi direcionado para o branch Ferramenta.")
-elif st.session_state.page == 'relatorio':
-    st.header("Relatorio")
-    st.write("Você foi direcionado para o branch Relatorio.")
+
+elif st.sidebar.button("Relatorio"):
+    st.header("Relatório")
+    st.write("Você foi direcionado para o branch Relatório.")
+
 else:
     st.write("Selecione uma opção no menu lateral para navegar entre os branches.")
