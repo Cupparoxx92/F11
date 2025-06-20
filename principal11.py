@@ -5,6 +5,7 @@ import pytz
 import os
 
 from relatorio import pagina_relatorio  # Importação do relatório
+from colaborador import pagina_colaborador
 
 
 # =========================
