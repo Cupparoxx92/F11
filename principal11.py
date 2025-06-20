@@ -5,8 +5,8 @@ import pytz
 import os
 import csv
 
-# ===========================
-# Configuração inicial
+# ——————————————————————————————————————————————————————————————
+# Fuso horário
 fuso = pytz.timezone('America/Sao_Paulo')
 
 # Carregar colaboradores
@@ -25,127 +25,123 @@ except:
     ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
 
 # Arquivo de movimentação
-arquivo_mov = 'movimentacao.csv'
+mov_file = 'movimentacao.csv'
 cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
-if not os.path.exists(arquivo_mov):
-    pd.DataFrame(columns=cabecalho).to_csv(arquivo_mov, index=False, encoding='utf-8-sig')
+if not os.path.exists(mov_file):
+    pd.DataFrame(columns=cabecalho).to_csv(mov_file, index=False, encoding='utf-8-sig')
 
-# ===========================
-# Estados da aplicação
-if 'mostrar_resumo' not in st.session_state:
-    st.session_state.mostrar_resumo = False
-if 'reset' not in st.session_state:
-    st.session_state.reset = False
+# ——————————————————————————————————————————————————————————————
+# Configuração da página
+st.set_page_config(
+    page_title="Controle de Ferramentas",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# ===========================
-# Título e Layout
-st.set_page_config(page_title="Controle de Ferramentas", layout="wide")
 st.title("🔧 Controle de Movimentação de Ferramentas")
 
-# ===========================
-# Formulário principal
-with st.form("movimentacao"):
+# Estado do formulário
+if 'registrado' not in st.session_state:
+    st.session_state['registrado'] = False
 
-    col1, col2, col3 = st.columns([2, 2, 1])
+# Formulário
+with st.form("formulario"):
+    col1, col2 = st.columns(2)
 
     with col1:
-        matricula = st.text_input("Matrícula", value="" if st.session_state.reset else "")
+        matricula = st.text_input("Matrícula")
+        nome = ""
+        if matricula:
+            df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
+            if not df_col.empty:
+                nome = df_col['Nome'].values[0]
+        st.text_input("Nome", value=nome, disabled=True)
+
     with col2:
         tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
-    with col3:
         qtd = st.number_input("Quantidade de Ferramentas", min_value=1, value=1, step=1)
 
-    nome = ""
-    if matricula:
-        busca = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
-        if not busca.empty:
-            nome = busca['Nome'].values[0]
-    st.text_input("Nome", value=nome, disabled=True)
+    ferramentas_selecionadas = []
 
-    selecionadas = []
     for i in range(qtd):
-        with st.expander(f"Ferramenta {i+1}"):
-            cod = st.text_input(f"Código da Ferramenta {i+1}", key=f"cod{i}")
-            desc = ""
-            if cod:
-                busca = ferramentas[ferramentas['Codigo'].astype(str) == cod]
-                if not busca.empty:
-                    desc = busca['Descricao'].values[0]
-            st.text_input(f"Descrição {i+1}", value=desc, disabled=True, key=f"desc{i}")
-            selecionadas.append((cod, desc))
+        with st.expander(f"Ferramenta {i + 1}"):
+            codigo = st.text_input(f"Código da Ferramenta {i + 1}", key=f"cod{i}")
+            descricao = ""
+            if codigo:
+                df_fer = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
+                if not df_fer.empty:
+                    descricao = df_fer['Descricao'].values[0]
+            st.text_input(f"Descrição {i + 1}", value=descricao, disabled=True, key=f"desc{i}")
+
+            ferramentas_selecionadas.append((codigo, descricao))
 
     observacoes = st.text_area("Observações (opcional)")
 
-    col4, col5 = st.columns([1, 1])
-    confirmar = col4.form_submit_button("✅ Confirmar Movimentação")
-    limpar = col5.form_submit_button("🧹 Limpar")
+    col1, col2 = st.columns([3,1])
+    with col1:
+        confirmar = st.form_submit_button("✅ Confirmar Movimentação")
+    with col2:
+        limpar = st.form_submit_button("🧹 Limpar")
 
-    # ===========================
-    # Ação do botão Limpar
-    if limpar:
-        st.session_state.mostrar_resumo = False
-        st.session_state.reset = True
-        st.experimental_set_query_params()  # Força reset visual
-        st.rerun()
+# ——————————————————————————————————————————————————————————————
+# Lógica de botões
 
-    # ===========================
-    # Ação do botão Confirmar
-    if confirmar:
-        st.session_state.reset = False
-        if not nome:
-            st.error("Informe uma matrícula válida antes de registrar.")
-            st.session_state.mostrar_resumo = False
+if confirmar:
+    if not nome:
+        st.error("Informe uma matrícula válida antes de registrar.")
+    else:
+        ferramentas_validas = [(c, d) for c, d in ferramentas_selecionadas if c and d]
+        if not ferramentas_validas:
+            st.error("Informe pelo menos uma ferramenta válida antes de registrar.")
         else:
-            validas = [(c, d) for c, d in selecionadas if c and d]
-            if not validas:
-                st.error("Informe pelo menos uma ferramenta válida antes de registrar.")
-                st.session_state.mostrar_resumo = False
-            else:
-                agora = datetime.now(fuso)
-                datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
-                ferramentas_txt = "; ".join([f"{c} - {d}" for c, d in validas])
+            agora = datetime.now(fuso)
+            datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
+            ferramentas_str = "; ".join(f"{c} - {d}" for c, d in ferramentas_validas)
 
-                nova_linha = [datahora, matricula, nome, tipo, ferramentas_txt, observacoes]
-                with open(arquivo_mov, 'a', newline='', encoding='utf-8-sig') as f:
-                    writer = csv.writer(f)
-                    writer.writerow(nova_linha)
+            # Registrar no CSV
+            row = [datahora, matricula, nome, tipo, ferramentas_str, observacoes]
+            with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
+                writer = csv.writer(f)
+                writer.writerow(row)
 
-                st.success("Movimentação registrada com sucesso!")
+            st.success("Movimentação registrada com sucesso!")
 
-                # Criar resumo para impressão
-                resumo = f"""
-                ============================================
-                          RESUMO DE MOVIMENTAÇÃO
-                ============================================
-                Data/Hora: {datahora}
-                Nome: {nome}
-                Matrícula: {matricula}
-                Tipo: {tipo}
+            # Gerar resumo
+            resumo = f"""
+===========================================================
+                RESUMO DE MOVIMENTAÇÃO
+===========================================================
+Data/Hora: {datahora}
+Nome: {nome}
+Matrícula: {matricula}
+Tipo: {tipo}
 
-                Ferramentas:
-                """
-                for c, d in validas:
-                    resumo += f" - {c} - {d}\n"
+Ferramentas:
+"""
+            for c, d in ferramentas_validas:
+                resumo += f" - {c} - {d}\n"
 
-                resumo += f"""
-                \nObservações: {observacoes}
-                \n\nAssinatura: ____________________________________________
-                ============================================
-                """
+            resumo += f"""
+Observações: {observacoes}
 
-                with open("resumo_movimentacao.txt", "w", encoding="utf-8-sig") as file:
-                    file.write(resumo)
+Assinatura: ____________________________________________
 
-                st.session_state.mostrar_resumo = True
+===========================================================
+"""
 
-# ===========================
-# Mostrar botão de download APÓS confirmação
-if st.session_state.mostrar_resumo:
-    with open("resumo_movimentacao.txt", "r", encoding="utf-8-sig") as file:
-        conteudo = file.read()
+            st.session_state['resumo'] = resumo
+            st.session_state['registrado'] = True
+
+# Botão Limpar
+if limpar:
+    st.session_state['registrado'] = False
+    st.experimental_rerun()
+
+# Botão de Download só aparece após confirmar
+if st.session_state.get('registrado'):
     st.download_button(
         label="📄 Baixar Resumo para Impressão",
-        data=conteudo,
-        file_name=f"resumo_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt",
+        data=st.session_state['resumo'],
+        file_name=f"resumo_{matricula}_{datetime.now(fuso).strftime('%Y%m%d%H%M%S')}.txt",
         mime="text/plain"
     )
