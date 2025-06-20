@@ -61,7 +61,7 @@ if menu == "Movimentação":
         key="tipo"
     )
 
-    # Ferramentas
+    # Quantidade de Ferramentas e lookup
     qtd = st.number_input(
         "Quantidade de Ferramentas",
         min_value=1, step=1, value=1,
@@ -69,10 +69,10 @@ if menu == "Movimentação":
     )
 
     selecionadas = []
-    for i in range(st.session_state.qtd_ferramentas):
+    for i in range(qtd):
         with st.expander(f"Ferramenta {i+1}"):
             codigo = st.text_input(
-                "Código da Ferramenta",
+                f"Código da Ferramenta {i+1}",
                 key=f"codigo_{i}"
             )
             desc = ""
@@ -80,7 +80,7 @@ if menu == "Movimentação":
                 df_f = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
                 desc = df_f['Descricao'].values[0] if not df_f.empty else "Código não encontrado"
             st.text_input(
-                "Descrição",
+                f"Descrição {i+1}",
                 value=desc,
                 disabled=True,
                 key=f"descricao_{i}"
@@ -90,7 +90,7 @@ if menu == "Movimentação":
     # Observações
     observacoes = st.text_area("Observações (opcional)", key="observacoes")
 
-    # Confirmar botão
+    # Botão Confirmar Movimentação
     if st.button("Confirmar Movimentação"):
         # 1) Salvar em CSV
         agora = datetime.now(fuso)
@@ -106,7 +106,7 @@ if menu == "Movimentação":
                 writer.writerow(header)
             writer.writerow(new_row)
 
-        # 2) Limpar formulário reiniciando a app
+        # 2) Limpar formulário (reinicia app)
         st.experimental_rerun()
 
 # ——————————————————————————————————————————————————————————————
