@@ -4,10 +4,9 @@ from datetime import datetime
 import pytz
 import os
 
-# Importa os módulos
+# Importa as páginas externas
 from relatorio import pagina_relatorio
 from colaborador import pagina_colaborador
-
 
 # =========================
 # CONFIGURAÇÕES INICIAIS
@@ -29,7 +28,7 @@ arquivo_movimentacao = 'movimentacao.csv'
 arquivo_colaboradores = 'colaboradores.csv'
 arquivo_ferramentas = 'ferramentas.csv'
 
-# Cabeçalho da movimentação
+# Cabeçalho
 cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
 
 # =========================
@@ -111,7 +110,6 @@ def ferramenta_disponivel(codigo):
         return False
     else:
         return True
-
 
 # =========================
 # MENU LATERAL
@@ -219,7 +217,7 @@ elif menu == "Colaborador":
 
 elif menu == "Ferramenta":
     st.subheader("🛠️ Gerenciamento de Ferramentas")
-    st.info("🔧 Página em construção.")
+    st.info("🔧 Página em construção. Podemos incluir cadastro, edição e controle de ferramentas futuramente.")
 
 elif menu == "Relatório":
     pagina_relatorio()
