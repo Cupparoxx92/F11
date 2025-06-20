@@ -22,20 +22,36 @@ if st.sidebar.button("Colaborador"):
     st.session_state.page = 'colaborador'
 if st.sidebar.button("Ferramenta"):
     st.session_state.page = 'ferramenta'
-if st.sidebar.button("Relatorio"):
+if st.sidebar.button("Relatório"):
     st.session_state.page = 'relatorio'
 
 # Renderiza conteúdo conforme o branch selecionado
 if st.session_state.page == 'movimentacao':
     st.header("Movimentação")
-    # Campos de movimentação
-    matricula = st.text_input("Matrícula")
-    nome = st.text_input("Nome", value="", disabled=True)
-    ferramenta = st.text_input("Ferramenta")
-    descricao = st.text_input("Descrição", value="", disabled=True)
+
+    # Linha 1: Matrícula e Nome
+    col1, col2 = st.columns(2)
+    with col1:
+        matricula = st.text_input("Matrícula")
+    with col2:
+        nome = st.text_input("Nome", value="", disabled=True)
+
+    # Linha 2: Ferramenta e Descrição
+    col3, col4 = st.columns(2)
+    with col3:
+        ferramenta = st.text_input("Ferramenta")
+    with col4:
+        descricao = st.text_input("Descrição", value="", disabled=True)
+
+    # Linha 3: Tipo de movimentação
     tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
-    if st.button("Confirmar Movimentação", key="confirm_movimentacao"):
-        st.success(f"Movimentação registrada: {tipo} - Matrícula: {matricula} - Ferramenta: {ferramenta}")
+
+    # Botão confirmar
+    if st.button("Confirmar Movimentação"):
+        st.success(
+            f"Movimentação registrada com sucesso!\n"
+            f"Matrícula: {matricula} | Ferramenta: {ferramenta} | Tipo: {tipo}"
+        )
 
 elif st.session_state.page == 'colaborador':
     st.header("Colaborador")
