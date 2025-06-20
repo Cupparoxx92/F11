@@ -52,7 +52,7 @@ def pagina_relatorio():
             df_filtrado = df_filtrado[df_filtrado['DataHora'].dt.date <= data_fim]
 
         if codigo_ferramenta:
-            df_filtrado = df_filtrado[df_filtrado['Ferramentas'].str.contains(codigo_ferramenta, na=False)]
+            df_filtrado = df_filtrado[df_filtrado['CodigoFerramenta'].astype(str).str.contains(codigo_ferramenta)]
 
         # ------------------------------
         # Resultado do Relatório
@@ -86,17 +86,16 @@ def pagina_relatorio():
             df_ret = df_mov.copy()
             ferramentas_status = {}
 
-            for index, row in df_ret.iterrows():
-                itens = row['Ferramentas'].split(';')
-                for item in itens:
-                    cod = item.strip().split('-')[0].strip()
-                    if cod:
-                        ferramentas_status[cod] = {
-                            'Status': row['Tipo'],
-                            'DataHora': row['DataHora'],
-                            'Matricula': row['Matricula'],
-                            'Nome': row['Nome']
-                        }
+            for _, row in df_ret.iterrows():
+                codigo = str(row['CodigoFerramenta'])
+                if codigo:
+                    ferramentas_status[codigo] = {
+                        'Status': row['Tipo'],
+                        'DataHora': row['DataHora'],
+                        'Matricula': row['Matricula'],
+                        'Nome': row['Nome'],
+                        'Descricao': row['DescricaoFerramenta']
+                    }
 
             retiradas = {
                 k: v for k, v in ferramentas_status.items() if v['Status'] == 'Retirada'
@@ -108,6 +107,7 @@ def pagina_relatorio():
                 df_exibicao = pd.DataFrame([
                     {
                         'Código': cod,
+                        'Descrição': v['Descricao'],
                         'Data/Hora da Retirada': v['DataHora'],
                         'Com': f"{v['Nome']} (Matrícula: {v['Matricula']})"
                     }
@@ -128,4 +128,3 @@ def pagina_relatorio():
     except Exception as e:
         st.warning("⚠️ Erro ao carregar os dados.")
         st.error(e)
-
