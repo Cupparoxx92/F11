@@ -7,6 +7,7 @@ import os
 from relatorio import pagina_relatorio
 from colaborador import pagina_colaborador
 
+
 # =========================
 # CONFIGURAÇÕES
 # =========================
@@ -19,22 +20,25 @@ st.set_page_config(
 
 st.title("🛠️ Controle de Ferramentaria")
 
-# Fuso horário
-fuso = pytz.timezone('America/Sao_Paulo')
-
+# =========================
 # Arquivos
+# =========================
 arquivo_movimentacao = 'movimentacao.csv'
 arquivo_colaboradores = 'colaboradores.csv'
 arquivo_ferramentas = 'ferramentas.csv'
 
+fuso = pytz.timezone('America/Sao_Paulo')
+
 cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'CodigoFerramenta', 'DescricaoFerramenta', 'Observacoes']
 
+
 # =========================
-# FUNÇÕES AUXILIARES
+# Funções auxiliares
 # =========================
 def inicializar_arquivo_movimentacao():
     if not os.path.exists(arquivo_movimentacao):
         pd.DataFrame(columns=cabecalho).to_csv(arquivo_movimentacao, index=False, encoding='utf-8-sig')
+
 
 def carregar_colaboradores():
     try:
@@ -43,6 +47,7 @@ def carregar_colaboradores():
         return df
     except:
         return pd.DataFrame(columns=['Matricula', 'Nome'])
+
 
 def carregar_ferramentas():
     try:
@@ -53,13 +58,28 @@ def carregar_ferramentas():
     except:
         return pd.DataFrame(columns=['Codigo', 'Descricao'])
 
-def registrar_movimentacao(matricula, nome, tipo, ferramentas, observacoes):
-    inicializar_arquivo_movimentacao()
-    datahora = datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S')
 
-    linhas = []
+def ferramenta_disponivel(codigo):
+    if not os.path.exists(arquivo_movimentacao):
+        return True
+
+    df = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig')
+
+    df = df[df['CodigoFerramenta'].astype(str) == str(codigo)]
+
+    if df.empty:
+        return True
+
+    ultima_mov = df.iloc[-1]
+    return ultima_mov['Tipo'] != 'Retirada'
+
+
+def registrar_movimentacao(datahora, matricula, nome, tipo, ferramentas, observacoes):
+    inicializar_arquivo_movimentacao()
+
+    registros = []
     for codigo, descricao in ferramentas:
-        dados = {
+        registros.append({
             'DataHora': datahora,
             'Matricula': matricula,
             'Nome': nome,
@@ -67,13 +87,11 @@ def registrar_movimentacao(matricula, nome, tipo, ferramentas, observacoes):
             'CodigoFerramenta': codigo,
             'DescricaoFerramenta': descricao,
             'Observacoes': observacoes
-        }
-        linhas.append(dados)
+        })
 
-    df = pd.DataFrame(linhas)
-    df.to_csv(arquivo_movimentacao, mode='a', index=False, header=not os.path.exists(arquivo_movimentacao), encoding='utf-8-sig')
+    df = pd.DataFrame(registros)
+    df.to_csv(arquivo_movimentacao, mode='a', index=False, header=False, encoding='utf-8-sig')
 
-    return datahora
 
 def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
     resumo = f"""
@@ -97,21 +115,9 @@ def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
     """
     return resumo
 
-def ferramenta_disponivel(codigo):
-    if not os.path.exists(arquivo_movimentacao):
-        return True
-
-    df = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig')
-    df = df[df['CodigoFerramenta'].astype(str) == str(codigo)]
-
-    if df.empty:
-        return True
-
-    ultima_mov = df.iloc[-1]
-    return ultima_mov['Tipo'] != 'Retirada'
 
 # =========================
-# MENU
+# MENU LATERAL
 # =========================
 menu = st.sidebar.radio(
     "📑 Menu",
@@ -125,8 +131,10 @@ colaboradores = carregar_colaboradores()
 ferramentas = carregar_ferramentas()
 
 # =========================
-# MOVIMENTAÇÃO
+# PÁGINAS DO MENU
 # =========================
+
+# >>>>>>>>> MOVIMENTAÇÃO <<<<<<<<<<<
 if menu == "Movimentação":
     st.subheader("📦 Movimentação de Ferramentas")
 
@@ -190,7 +198,10 @@ if menu == "Movimentação":
             if not ferramentas_validas:
                 st.error("⚠️ Informe pelo menos uma ferramenta válida antes de registrar.")
             else:
-                datahora = registrar_movimentacao(
+                datahora = datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S')
+
+                registrar_movimentacao(
+                    datahora=datahora,
                     matricula=matricula,
                     nome=nome,
                     tipo=tipo,
@@ -200,8 +211,10 @@ if menu == "Movimentação":
 
                 st.success("✅ Movimentação registrada com sucesso!")
 
-                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas,
-                                      observacoes if observacoes else "Sem Observações")
+                resumo = gerar_resumo(
+                    datahora, matricula, nome, tipo, ferramentas_validas,
+                    observacoes if observacoes else "Sem Observações"
+                )
 
                 st.download_button(
                     label="📄 Baixar Resumo para Impressão",
@@ -210,21 +223,18 @@ if menu == "Movimentação":
                     mime="text/plain"
                 )
 
-# =========================
-# COLABORADOR
-# =========================
+
+# >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
     pagina_colaborador()
 
-# =========================
-# FERRAMENTA
-# =========================
+
+# >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
     st.subheader("🛠️ Gerenciamento de Ferramentas")
     st.info("🔧 Página em construção. Podemos futuramente cadastrar e editar ferramentas aqui.")
 
-# =========================
-# RELATÓRIO
-# =========================
+
+# >>>>>>>>> RELATÓRIO <<<<<<<<<<<
 elif menu == "Relatório":
     pagina_relatorio()
