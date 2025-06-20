@@ -2,27 +2,29 @@ import streamlit as st
 from datetime import datetime
 import pandas as pd
 import pytz
+import os
+import csv
 
 # ——————————————————————————————————————————————————————————————
-# 1) Defina o fuso horário (ex.: São Paulo)
+# 1) Fuso horário local (ex.: São Paulo)
 fuso = pytz.timezone('America/Sao_Paulo')
 
-# 2) Carregue e normalize a base de colaboradores
+# 2) Carregar e normalizar colaboradores
 try:
     colaboradores = pd.read_csv('colaboradores.csv', encoding='utf-8-sig')
     colaboradores.columns = colaboradores.columns.str.strip()
 except Exception as e:
-    st.error(f"Não foi possível ler 'colaboradores.csv': {e}")
-    colaboradores = pd.DataFrame(columns=['Matricula', 'Nome'])
+    st.error(f"Erro ao ler 'colaboradores.csv': {e}")
+    colaboradores = pd.DataFrame(columns=['Matricula','Nome'])
 
-# 3) Carregue e normalize a base de ferramentas
+# 3) Carregar e normalizar ferramentas
 try:
     ferramentas = pd.read_csv('ferramentas.csv', encoding='utf-8-sig')
     ferramentas.columns = ferramentas.columns.str.strip()
-    ferramentas.rename(columns={'Descrição': 'Descricao'}, inplace=True)
+    ferramentas.rename(columns={'Descrição':'Descricao'}, inplace=True)
 except Exception as e:
-    st.error(f"Não foi possível ler 'ferramentas.csv': {e}")
-    ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
+    st.error(f"Erro ao ler 'ferramentas.csv': {e}")
+    ferramentas = pd.DataFrame(columns=['Codigo','Descricao'])
 
 # ——————————————————————————————————————————————————————————————
 # Configuração geral da página
@@ -34,71 +36,96 @@ st.set_page_config(
 st.title("Ferramentaria")
 
 # Menu lateral
-menu = st.sidebar.radio("Menu", ["Movimentação", "Colaborador", "Ferramenta", "Relatório"])
+menu = st.sidebar.radio(
+    "Menu",
+    ["Movimentação", "Colaborador", "Ferramenta", "Relatório"]
+)
 
 # ——————————————————————————————————————————————————————————————
 if menu == "Movimentação":
     st.header("Movimentação")
 
-    # Matrícula → Nome automático
-    c1, c2 = st.columns(2)
-    with c1:
-        matricula = st.text_input("Matrícula")
-    with c2:
-        nome = ""
-        if matricula:
-            df = colaboradores[ colaboradores['Matricula'].astype(str) == matricula ]
-            nome = df['Nome'].values[0] if not df.empty else "Matrícula não encontrada"
-        st.text_input("Nome", value=nome, disabled=True)
+    # Matrícula e lookup de nome
+    matricula = st.text_input("Matrícula", key="matricula")
+    nome = ""
+    if matricula:
+        df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
+        nome = df_col['Nome'].values[0] if not df_col.empty else "Matrícula não encontrada"
+    st.text_input("Nome", value=nome, disabled=True)
 
     # Tipo de movimentação
-    tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
+    tipo = st.selectbox(
+        "Tipo de Movimentação",
+        ["Retirada", "Devolução"],
+        key="tipo"
+    )
 
-    st.markdown("---")
-    st.subheader("Ferramentas")
+    # Ferramentas
+    qtd = st.number_input(
+        "Quantidade de Ferramentas",
+        min_value=1, step=1, value=1,
+        key="qtd_ferramentas"
+    )
 
     selecionadas = []
-    qtd = st.number_input("Quantidade de Ferramentas", min_value=1, value=1, step=1)
-
-    for i in range(qtd):
+    for i in range(st.session_state.qtd_ferramentas):
         with st.expander(f"Ferramenta {i+1}"):
-            f1, f2 = st.columns(2)
-            with f1:
-                codigo = st.text_input(f"Código {i+1}", key=f"cod_{i}")
-            with f2:
-                desc = ""
-                if codigo:
-                    df2 = ferramentas[ ferramentas['Codigo'].astype(str) == codigo ]
-                    desc = df2['Descricao'].values[0] if not df2.empty else "Código não encontrado"
-                st.text_input(f"Descrição {i+1}", value=desc, disabled=True)
+            codigo = st.text_input(
+                "Código da Ferramenta",
+                key=f"codigo_{i}"
+            )
+            desc = ""
+            if codigo:
+                df_f = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
+                desc = df_f['Descricao'].values[0] if not df_f.empty else "Código não encontrado"
+            st.text_input(
+                "Descrição",
+                value=desc,
+                disabled=True,
+                key=f"descricao_{i}"
+            )
             selecionadas.append((codigo, desc))
 
-    st.markdown("---")
-    observacoes = st.text_area("Observações (opcional)")
+    # Observações
+    observacoes = st.text_area("Observações (opcional)", key="observacoes")
 
+    # Confirmar botão
     if st.button("Confirmar Movimentação"):
+        # Ação 1) Salvar em CSV
         agora = datetime.now(fuso)
-        data_hora = agora.strftime('%d/%m/%Y %H:%M:%S')
+        datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
+        ferramentas_str = "; ".join(f"{c} - {d}" for c,d in selecionadas)
+        file_path = 'movimentacoes.csv'
+        header = ['DataHora','Matricula','Nome','Tipo','Ferramentas','Observacoes']
+        new_row = [datahora, matricula, nome, tipo, ferramentas_str, observacoes]
+        write_header = not os.path.exists(file_path)
+        with open(file_path, 'a', newline='', encoding='utf-8-sig') as f:
+            writer = csv.writer(f)
+            if write_header:
+                writer.writerow(header)
+            writer.writerow(new_row)
 
-        st.success("Movimentação registrada com sucesso!")
-        st.subheader("Resumo:")
-        st.write(f"- **Data/Hora:** {data_hora}")
-        st.write(f"- **Matrícula:** {matricula} — **Nome:** {nome}")
-        st.write(f"- **Tipo:** {tipo}")
-        st.write(f"- **Observações:** {observacoes or '—'}")
-        st.write("**Ferramentas:**")
-        for idx, (c, d) in enumerate(selecionadas, start=1):
-            st.write(f"{idx}. {c} ― {d}")
+        # Ação 2) Limpar formulário
+        st.session_state['matricula'] = ""
+        st.session_state['tipo'] = "Retirada"
+        st.session_state['qtd_ferramentas'] = 1
+        st.session_state['observacoes'] = ""
+        for i in range(len(selecionadas)):
+            st.session_state[f'codigo_{i}'] = ""
+            st.session_state[f'descricao_{i}'] = ""
 
 # ——————————————————————————————————————————————————————————————
+elif menu == "Relatório":
+    st.header("Relatório de Movimentações")
+    try:
+        df_mov = pd.read_csv('movimentacoes.csv', encoding='utf-8-sig')
+        st.dataframe(df_mov)
+    except FileNotFoundError:
+        st.info("Ainda não há movimentações registradas.")
+
 elif menu == "Colaborador":
     st.header("Colaborador")
     st.info("Página em construção.")
-
 elif menu == "Ferramenta":
     st.header("Ferramenta")
-    st.info("Página em construção.")
-
-elif menu == "Relatório":
-    st.header("Relatório")
     st.info("Página em construção.")
