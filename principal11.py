@@ -8,59 +8,70 @@ from relatorio import pagina_relatorio
 from colaborador import pagina_colaborador
 from ferramenta import pagina_ferramenta
 
-
 # =========================
-# CONFIGURAÇÕES
+# CONFIGURAÇÕES INICIAIS
 # =========================
 st.set_page_config(
-    page_title="Ferramentaria - Controle de Movimentação",
+    page_title="Controle de Ferramentaria",
     layout="wide",
-    page_icon="🛠️",
-    initial_sidebar_state="expanded"
+    page_icon="🛠️"
 )
 
 st.title("🛠️ Controle de Ferramentaria")
 
-# Fuso horário
+# =========================
+# VARIÁVEIS E ARQUIVOS
+# =========================
 fuso = pytz.timezone('America/Sao_Paulo')
 
-# Arquivos
 arquivo_movimentacao = 'movimentacao.csv'
 arquivo_colaboradores = 'colaboradores.csv'
 arquivo_ferramentas = 'ferramentas.csv'
 
-cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramenta', 'Observacoes']
+cabecalho_movimentacao = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'CodigoFerramenta', 'DescricaoFerramenta', 'Observacoes']
 
 
 # =========================
 # FUNÇÕES AUXILIARES
 # =========================
-def inicializar_arquivo_movimentacao():
+def inicializar_movimentacao():
     if not os.path.exists(arquivo_movimentacao):
-        pd.DataFrame(columns=cabecalho).to_csv(arquivo_movimentacao, index=False, encoding='utf-8-sig')
+        pd.DataFrame(columns=cabecalho_movimentacao).to_csv(arquivo_movimentacao, index=False, encoding='utf-8-sig')
 
 
 def carregar_colaboradores():
     try:
-        df = pd.read_csv(arquivo_colaboradores, encoding='utf-8-sig')
-        df.columns = df.columns.str.strip()
-        return df
+        return pd.read_csv(arquivo_colaboradores, encoding='utf-8-sig')
     except:
         return pd.DataFrame(columns=['Matricula', 'Nome'])
 
 
 def carregar_ferramentas():
     try:
-        df = pd.read_csv(arquivo_ferramentas, encoding='utf-8-sig')
-        df.columns = df.columns.str.strip()
-        df.rename(columns={'Descrição': 'Descricao'}, inplace=True)
-        return df
+        return pd.read_csv(arquivo_ferramentas, encoding='utf-8-sig')
     except:
-        return pd.DataFrame(columns=['Codigo', 'Descricao', 'Status'])
+        return pd.DataFrame(columns=['Codigo', 'Descricao', 'StatusConserto'])
 
 
-def registrar_movimentacao(matricula, nome, tipo, ferramenta, observacoes):
-    inicializar_arquivo_movimentacao()
+def ferramenta_disponivel(codigo):
+    df_mov = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig') if os.path.exists(arquivo_movimentacao) else pd.DataFrame(columns=cabecalho_movimentacao)
+    df_ferr = carregar_ferramentas()
+
+    # Verifica se está em conserto
+    ferramenta = df_ferr[df_ferr['Codigo'].astype(str) == str(codigo)]
+    if not ferramenta.empty and ferramenta['StatusConserto'].values[0] == 'Em Conserto':
+        return False
+
+    # Verifica última movimentação
+    df = df_mov[df_mov['CodigoFerramenta'].astype(str) == str(codigo)]
+    if df.empty:
+        return True
+    ultima = df.iloc[-1]
+    return ultima['Tipo'] == 'Devolução'
+
+
+def registrar_movimentacao(matricula, nome, tipo, codigo, descricao, observacoes):
+    inicializar_movimentacao()
     datahora = datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S')
 
     dados = {
@@ -68,66 +79,21 @@ def registrar_movimentacao(matricula, nome, tipo, ferramenta, observacoes):
         'Matricula': matricula,
         'Nome': nome,
         'Tipo': tipo,
-        'Ferramenta': ferramenta,
+        'CodigoFerramenta': codigo,
+        'DescricaoFerramenta': descricao,
         'Observacoes': observacoes
     }
 
     df = pd.DataFrame([dados])
-    df.to_csv(arquivo_movimentacao, mode='a', index=False, header=False, encoding='utf-8-sig')
+    df.to_csv(arquivo_movimentacao, mode='a', header=not os.path.exists(arquivo_movimentacao), index=False, encoding='utf-8-sig')
 
     return datahora
-
-
-def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
-    resumo = f"""
-    ==============================================
-                RESUMO DE MOVIMENTAÇÃO
-    ==============================================
-    Data/Hora: {datahora}
-    Nome: {nome}
-    Matrícula: {matricula}
-    Tipo de Movimentação: {tipo}
-
-    Ferramentas:
-    """
-    for c, d in ferramentas:
-        resumo += f" - {c} - {d}\n"
-
-    resumo += f"""
-    \nObservações: {observacoes}
-    \n\nAssinatura: ____________________________________________
-    ==============================================
-    """
-    return resumo
-
-
-def ferramenta_disponivel(codigo):
-    """Verifica se a ferramenta está disponível (não retirada e não em conserto)."""
-    df_mov = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig') if os.path.exists(arquivo_movimentacao) else pd.DataFrame(columns=cabecalho)
-    df_mov = df_mov[df_mov['Ferramenta'].str.contains(str(codigo), na=False)]
-
-    if not df_mov.empty:
-        ultima_mov = df_mov.iloc[-1]
-        if ultima_mov['Tipo'] == 'Retirada':
-            return False  # Está fora
-
-    # Verificar se está em conserto
-    df_ferr = carregar_ferramentas()
-    ferramenta = df_ferr[df_ferr['Codigo'].astype(str) == str(codigo)]
-
-    if not ferramenta.empty and ferramenta['Status'].values[0] == 'Em Conserto':
-        return False  # Está em conserto
-
-    return True
 
 
 # =========================
 # MENU LATERAL
 # =========================
-menu = st.sidebar.radio(
-    "📑 Menu",
-    ["Movimentação", "Colaborador", "Ferramenta", "Relatório"]
-)
+menu = st.sidebar.radio("Menu", ["Movimentação", "Colaborador", "Ferramenta", "Relatório"])
 
 # =========================
 # CARREGAMENTO DE DADOS
@@ -137,110 +103,94 @@ ferramentas = carregar_ferramentas()
 
 
 # =========================
-# PÁGINAS DO MENU
+# MOVIMENTAÇÃO
 # =========================
-
-# >>>>>>>>> MOVIMENTAÇÃO <<<<<<<<<<<
 if menu == "Movimentação":
     st.subheader("📦 Movimentação de Ferramentas")
 
-    with st.form("formulario", clear_on_submit=False):
+    with st.form("form_movimentacao"):
         col1, col2 = st.columns(2)
 
         with col1:
-            matricula = st.text_input("Matrícula", key="matricula")
+            matricula = st.text_input("Matrícula")
             nome = ""
             if matricula:
                 df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
                 if not df_col.empty:
                     nome = df_col['Nome'].values[0]
-            st.text_input("Nome", value=nome, disabled=True, key="nome")
+            st.text_input("Nome", value=nome, disabled=True)
 
         with col2:
             tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
-            qtd = st.number_input("Quantidade de Ferramentas", min_value=1, step=1, value=1)
+            quantidade = st.number_input("Quantidade de Ferramentas", min_value=1, step=1, value=1)
 
-        selecionadas = []
-        erro_ferramenta = False
+        ferramentas_selecionadas = []
+        erro = False
 
-        for i in range(qtd):
-            with st.expander(f"🔧 Ferramenta {i + 1}"):
+        for i in range(quantidade):
+            with st.expander(f"Ferramenta {i + 1}"):
                 codigo = st.text_input(f"Código da Ferramenta {i + 1}", key=f"cod_{i}")
-                desc = ""
+                descricao = ""
+
                 if codigo:
                     df_ferr = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
                     if not df_ferr.empty:
-                        desc = df_ferr['Descricao'].values[0]
+                        descricao = df_ferr['Descricao'].values[0]
 
-                        if tipo == "Retirada":
-                            if not ferramenta_disponivel(codigo):
-                                st.error(
-                                    f"⚠️ A ferramenta {codigo} - {desc} está indisponível! Verifique se está retirada ou em conserto."
-                                )
-                                erro_ferramenta = True
-                                desc = ""
+                        if tipo == "Retirada" and not ferramenta_disponivel(codigo):
+                            st.error(f"❌ A ferramenta {codigo} - {descricao} não está disponível (retirada ou em conserto).")
+                            erro = True
+                            descricao = ""
 
-                st.text_input(f"Descrição {i + 1}", value=desc, disabled=True, key=f"desc_{i}")
-                selecionadas.append((codigo, desc))
+                    st.text_input(f"Descrição {i + 1}", value=descricao, disabled=True, key=f"desc_{i}")
+                    ferramentas_selecionadas.append((codigo, descricao))
 
-        observacoes = st.text_area("Observações (opcional)", key="observacoes")
-        sem_obs = st.checkbox("✔️ Sem Observações", key="semobs")
+        observacoes = st.text_area("Observações (opcional)")
+        sem_obs = st.checkbox("✔️ Sem Observações")
 
-        col3, col4 = st.columns([1, 5])
-        submit = col3.form_submit_button("✅ Confirmar Movimentação")
-        limpar = col4.form_submit_button("🧹 Limpar")
+        enviar = st.form_submit_button("✅ Confirmar Movimentação")
+        limpar = st.form_submit_button("🧹 Limpar")
 
     if limpar:
         st.experimental_rerun()
 
-    if submit:
+    if enviar:
         if not nome:
-            st.error("⚠️ Informe uma matrícula válida antes de registrar.")
-        elif erro_ferramenta:
-            st.error("⚠️ Corrija os erros nas ferramentas antes de registrar.")
+            st.error("⚠️ Matrícula inválida.")
+        elif erro:
+            st.error("⚠️ Corrija os erros nas ferramentas.")
         elif not observacoes and not sem_obs:
-            st.error("⚠️ Preencha Observações ou marque 'Sem Observações'.")
+            st.error("⚠️ Preencha observações ou marque 'Sem Observações'.")
         else:
-            ferramentas_validas = [(c, d) for c, d in selecionadas if c and d]
-            if not ferramentas_validas:
-                st.error("⚠️ Informe pelo menos uma ferramenta válida antes de registrar.")
-            else:
-                for c, d in ferramentas_validas:
+            for codigo, descricao in ferramentas_selecionadas:
+                if codigo and descricao:
                     registrar_movimentacao(
                         matricula=matricula,
                         nome=nome,
                         tipo=tipo,
-                        ferramenta=f"{c} - {d}",
+                        codigo=codigo,
+                        descricao=descricao,
                         observacoes=observacoes if observacoes else "Sem Observações"
                     )
-
-                st.success("✅ Movimentação registrada com sucesso!")
-
-                resumo = gerar_resumo(
-                    datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S'),
-                    matricula,
-                    nome,
-                    tipo,
-                    ferramentas_validas,
-                    observacoes if observacoes else "Sem Observações"
-                )
-
-                st.download_button(
-                    label="📄 Baixar Resumo para Impressão",
-                    data=resumo,
-                    file_name=f"resumo_{matricula}_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt",
-                    mime="text/plain"
-                )
+            st.success("✅ Movimentação registrada com sucesso.")
 
 
-# >>>>>>>>> COLABORADOR <<<<<<<<<<<
+# =========================
+# COLABORADOR
+# =========================
 elif menu == "Colaborador":
     pagina_colaborador()
 
-# >>>>>>>>> FERRAMENTA <<<<<<<<<<<
+
+# =========================
+# FERRAMENTA
+# =========================
 elif menu == "Ferramenta":
     pagina_ferramenta()
 
-# >>>>>>>>> RELATÓRIO <<<<<<<<<<<
+
+# =========================
+# RELATÓRIO
+# =========================
 elif menu == "Relatório":
     pagina_relatorio()
