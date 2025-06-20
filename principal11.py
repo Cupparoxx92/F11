@@ -175,7 +175,7 @@ if menu == "Movimentação":
         limpar = col4.form_submit_button("🧹 Limpar")
 
     if limpar:
-        st.experimental_rerun()
+        st.rerun()
 
     if submit:
         if not nome:
