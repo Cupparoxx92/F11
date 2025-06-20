@@ -5,131 +5,151 @@ import pytz
 import os
 import csv
 
-# ===============================================
-# Configurações iniciais
+# ==============================
+# CONFIGURAÇÕES INICIAIS
+# ==============================
+st.set_page_config(page_title="Controle de Ferramentas", layout="wide")
+
+# Fuso horário
 fuso = pytz.timezone('America/Sao_Paulo')
+
+# Inicializar controle do download
+if 'mostrar_download' not in st.session_state:
+    st.session_state.mostrar_download = False
+
+# ==============================
+# CARREGAMENTO DOS DADOS
+# ==============================
+
+# Arquivos principais
+arquivo_colaboradores = 'colaboradores.csv'
+arquivo_ferramentas = 'ferramentas.csv'
+arquivo_movimentacoes = 'movimentacao.csv'
 
 # Carregar colaboradores
 try:
-    colaboradores = pd.read_csv('colaboradores.csv', encoding='utf-8-sig')
+    colaboradores = pd.read_csv(arquivo_colaboradores, encoding='utf-8-sig')
     colaboradores.columns = colaboradores.columns.str.strip()
 except:
     colaboradores = pd.DataFrame(columns=['Matricula', 'Nome'])
 
 # Carregar ferramentas
 try:
-    ferramentas = pd.read_csv('ferramentas.csv', encoding='utf-8-sig')
+    ferramentas = pd.read_csv(arquivo_ferramentas, encoding='utf-8-sig')
     ferramentas.columns = ferramentas.columns.str.strip()
     ferramentas.rename(columns={'Descrição': 'Descricao'}, inplace=True)
 except:
     ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
 
-# Arquivo de movimentação
-mov_file = 'movimentacao.csv'
-mov_header = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
-if not os.path.exists(mov_file):
-    pd.DataFrame(columns=mov_header).to_csv(mov_file, index=False, encoding='utf-8-sig')
+# Criar arquivo movimentação se não existir
+if not os.path.exists(arquivo_movimentacoes):
+    pd.DataFrame(columns=['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']) \
+      .to_csv(arquivo_movimentacoes, index=False, encoding='utf-8-sig')
 
-# ===============================================
-# Configuração da página
-st.set_page_config(page_title="Controle de Ferramentas", layout="wide")
-st.title("🔧 Controle de Ferramentas")
+# ==============================
+# INTERFACE
+# ==============================
 
-# ===============================================
-# Variáveis de controle
-if 'mostrar_download' not in st.session_state:
-    st.session_state.mostrar_download = False
+st.title("🔧 Controle de Movimentação de Ferramentas")
 
-# ===============================================
-# Formulário principal
-with st.form("formulario"):
-    st.subheader("Movimentação de Ferramentas")
-
-    matricula = st.text_input("Matrícula")
-    nome = ""
-    if matricula:
-        df_colab = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
-        if not df_colab.empty:
-            nome = df_colab['Nome'].values[0]
-    st.text_input("Nome", value=nome, disabled=True)
-
-    tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
-    quantidade = st.number_input("Quantidade de Ferramentas", min_value=1, step=1, value=1)
-
-    ferramentas_lista = []
-    for i in range(quantidade):
-        with st.expander(f"Ferramenta {i+1}"):
-            cod = st.text_input(f"Código da Ferramenta {i+1}", key=f"cod{i}")
-            descricao = ""
-            if cod:
-                df_ferramenta = ferramentas[ferramentas['Codigo'].astype(str) == cod]
-                if not df_ferramenta.empty:
-                    descricao = df_ferramenta['Descricao'].values[0]
-            st.text_input(f"Descrição {i+1}", value=descricao, disabled=True, key=f"desc{i}")
-            ferramentas_lista.append((cod, descricao))
-
-    obs = st.text_area("Observações (opcional)")
+with st.form("form_mov"):
 
     col1, col2 = st.columns(2)
-    enviar = col1.form_submit_button("✅ Confirmar Movimentação")
-    limpar = col2.form_submit_button("🗑️ Limpar")
 
-# ===============================================
-# Ações do botão LIMPAR
-if limpar:
-    st.session_state.clear()
-    st.experimental_rerun()
+    with col1:
+        matricula = st.text_input("Matrícula")
+        nome = ""
+        if matricula:
+            df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
+            if not df_col.empty:
+                nome = df_col['Nome'].values[0]
+        st.text_input("Nome", value=nome, disabled=True)
 
-# ===============================================
-# Ações do botão CONFIRMAR
-if enviar:
-    if not nome:
-        st.error("⚠️ Matrícula inválida. Informe uma matrícula válida.")
-    else:
-        ferramentas_validas = [(c, d) for c, d in ferramentas_lista if c and d]
-        if not ferramentas_validas:
-            st.error("⚠️ Informe pelo menos uma ferramenta válida.")
+    with col2:
+        tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
+        qtd = st.number_input("Quantidade de Ferramentas", min_value=1, value=1, step=1)
+
+    selecionadas = []
+
+    for i in range(qtd):
+        with st.expander(f"Ferramenta {i+1}"):
+            codigo = st.text_input(f"Código da Ferramenta {i+1}", key=f"cod{i}")
+            desc = ""
+            if codigo:
+                df_f = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
+                if not df_f.empty:
+                    desc = df_f['Descricao'].values[0]
+            st.text_input(f"Descrição {i+1}", value=desc, disabled=True, key=f"desc{i}")
+            selecionadas.append((codigo, desc))
+
+    observacoes = st.text_area("Observações (opcional)")
+
+    col_btn1, col_btn2 = st.columns(2)
+    confirmar = col_btn1.form_submit_button("✅ Confirmar Movimentação")
+    limpar = col_btn2.form_submit_button("🧹 Limpar")
+
+    # ==============================
+    # AÇÕES DOS BOTÕES
+    # ==============================
+
+    if confirmar:
+        if not nome:
+            st.error("Informe uma matrícula válida antes de registrar.")
         else:
-            agora = datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S')
-            ferramentas_str = "; ".join([f"{c} - {d}" for c, d in ferramentas_validas])
+            validas = [(c, d) for c, d in selecionadas if c and d]
+            if not validas:
+                st.error("Informe pelo menos uma ferramenta válida antes de registrar.")
+            else:
+                agora = datetime.now(fuso)
+                datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
 
-            nova_linha = [agora, matricula, nome, tipo, ferramentas_str, obs]
-            with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
-                writer = csv.writer(f)
-                writer.writerow(nova_linha)
+                ferramentas_str = "; ".join([f"{c} - {d}" for c, d in validas])
 
-            st.success("Movimentação registrada com sucesso!")
+                nova_linha = [datahora, matricula, nome, tipo, ferramentas_str, observacoes]
 
-            # Gerar resumo para impressão
-            resumo = f"""
-============================================
-            RESUMO DE MOVIMENTAÇÃO
-============================================
-Data/Hora: {agora}
+                # Salvar no CSV
+                with open(arquivo_movimentacoes, 'a', newline='', encoding='utf-8-sig') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(nova_linha)
+
+                st.success("Movimentação registrada com sucesso!")
+
+                # Gerar resumo para impressão
+                resumo = f"""
+====================================================
+                RESUMO DE MOVIMENTAÇÃO
+====================================================
+Data/Hora: {datahora}
 Nome: {nome}
 Matrícula: {matricula}
 Tipo: {tipo}
 
 Ferramentas:
 """
-            for c, d in ferramentas_validas:
-                resumo += f" - {c} - {d}\n"
+                for c, d in validas:
+                    resumo += f" - {c} - {d}\n"
 
-            resumo += f"""
-Observações: {obs}
+                resumo += f"""
+\nObservações: {observacoes}
 
-Assinatura: ____________________________________________
+\nAssinatura: ____________________________________________
 
-============================================
+====================================================
 """
 
-            with open("resumo_movimentacao.txt", "w", encoding="utf-8-sig") as file:
-                file.write(resumo)
+                with open("resumo_movimentacao.txt", "w", encoding="utf-8-sig") as file:
+                    file.write(resumo)
 
-            st.session_state.mostrar_download = True
+                st.session_state.mostrar_download = True
 
-# ===============================================
-# Download do resumo
+    if limpar:
+        st.session_state.mostrar_download = False
+        st.experimental_rerun()
+
+# ==============================
+# BOTÃO DE DOWNLOAD DO RESUMO
+# ==============================
+
 if st.session_state.mostrar_download:
     with open("resumo_movimentacao.txt", "r", encoding="utf-8-sig") as file:
         conteudo = file.read()
