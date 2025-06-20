@@ -4,6 +4,10 @@ from datetime import datetime
 import pytz
 import os
 
+# Importando o relatório
+from relatorio import pagina_relatorio
+
+
 # =========================
 # CONFIGURAÇÕES INICIAIS
 # =========================
@@ -94,19 +98,19 @@ def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
 def ferramenta_disponivel(codigo):
     """Verifica se a ferramenta está disponível para retirada"""
     if not os.path.exists(arquivo_movimentacao):
-        return True  # Se não tem registro, está disponível
+        return True
 
     df = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig')
     df = df[df['Ferramentas'].str.contains(str(codigo), na=False)]
 
     if df.empty:
-        return True  # Nunca foi movimentada, está disponível
+        return True
 
-    ultima_mov = df.iloc[-1]  # Pega o último registro dessa ferramenta
+    ultima_mov = df.iloc[-1]
     if 'Retirada' in ultima_mov['Tipo']:
-        return False  # Está fora
+        return False
     else:
-        return True  # Está disponível
+        return True
 
 
 # =========================
@@ -149,7 +153,7 @@ if menu == "Movimentação":
             qtd = st.number_input("Quantidade de Ferramentas", min_value=1, step=1, value=1)
 
         selecionadas = []
-        erro_ferramenta = False  # Flag para impedir envio se tiver erro
+        erro_ferramenta = False
 
         for i in range(qtd):
             with st.expander(f"Ferramenta {i + 1}"):
@@ -160,7 +164,6 @@ if menu == "Movimentação":
                     if not df_ferr.empty:
                         desc = df_ferr['Descricao'].values[0]
 
-                        # Verificar disponibilidade da ferramenta
                         if tipo == "Retirada":
                             if not ferramenta_disponivel(codigo):
                                 st.error(f"⚠️ A ferramenta {codigo} - {desc} já está retirada! Faça a devolução antes.")
@@ -212,26 +215,13 @@ if menu == "Movimentação":
 # >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
     st.subheader("👥 Gerenciamento de Colaboradores")
-    st.info("🔧 Página em construção. Podemos criar aqui: adicionar, editar e excluir colaboradores.")
+    st.info("🔧 Página em construção.")
 
 # >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
     st.subheader("🛠️ Gerenciamento de Ferramentas")
-    st.info("🔧 Página em construção. Podemos criar aqui: cadastro, edição e controle de ferramentas.")
+    st.info("🔧 Página em construção.")
 
 # >>>>>>>>> RELATÓRIO <<<<<<<<<<<
 elif menu == "Relatório":
-    st.subheader("📑 Relatório de Movimentações")
-
-    try:
-        df_mov = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig')
-        st.dataframe(df_mov)
-
-        st.download_button(
-            label="⬇️ Baixar CSV de Movimentações",
-            data=df_mov.to_csv(index=False, encoding='utf-8-sig'),
-            file_name="relatorio_movimentacoes.csv",
-            mime="text/csv"
-        )
-    except:
-        st.warning("⚠️ Nenhuma movimentação registrada ainda.")
+    pagina_relatorio()
