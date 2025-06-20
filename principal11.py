@@ -4,8 +4,9 @@ from datetime import datetime
 import pytz
 import os
 
+# Importações de outras páginas
 from relatorio import pagina_relatorio
-from colaborador import pagina_colaborador  # <-- Importando colaborador.py
+from colaborador import pagina_colaborador  # Chama Colaborador normalmente
 
 # =========================
 # CONFIGURAÇÕES INICIAIS
@@ -128,6 +129,8 @@ ferramentas = carregar_ferramentas()
 # =========================
 # PÁGINAS DO MENU
 # =========================
+
+# >>>>>>>>> MOVIMENTAÇÃO <<<<<<<<<<<
 if menu == "Movimentação":
     st.subheader("📦 Movimentação de Ferramentas")
 
@@ -213,21 +216,15 @@ if menu == "Movimentação":
                     mime="text/plain"
                 )
 
-# =========================
-# COLABORADOR
-# =========================
+# >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
     pagina_colaborador()
 
-# =========================
-# FERRAMENTA
-# =========================
+# >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
     st.subheader("🛠️ Gerenciamento de Ferramentas")
-    st.info("🔧 Página em construção. (Se quiser eu te ajudo a montar!)")
+    st.info("🔧 Página em construção.")
 
-# =========================
-# RELATÓRIO
-# =========================
+# >>>>>>>>> RELATÓRIO <<<<<<<<<<<
 elif menu == "Relatório":
     pagina_relatorio()
