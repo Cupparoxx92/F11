@@ -47,6 +47,7 @@ menu = st.sidebar.radio(
     ["Movimentação", "Colaborador", "Ferramenta", "Relatório"]
 )
 
+# ——————————————————————————————————————————————————————————————
 if menu == "Movimentação":
     st.header("Movimentação")
 
@@ -57,7 +58,7 @@ if menu == "Movimentação":
         nome = ""
         if matricula:
             df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
-            nome = df_col['Nome'].values[0] if not df_col.empty else "Matrícula não encontrada"
+            nome = df_col['Nome'].values[0] if not df_col.empty else ""
         st.text_input("Nome", value=nome, disabled=True)
 
         # Tipo de movimentação
@@ -73,7 +74,7 @@ if menu == "Movimentação":
                 desc = ""
                 if codigo:
                     df_f = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
-                    desc = df_f['Descricao'].values[0] if not df_f.empty else "Código não encontrado"
+                    desc = df_f['Descricao'].values[0] if not df_f.empty else ""
                 st.text_input(f"Descrição {i+1}", value=desc, disabled=True)
                 selecionadas.append((codigo, desc))
 
@@ -84,21 +85,27 @@ if menu == "Movimentação":
         submitted = st.form_submit_button("Confirmar Movimentação")
 
         if submitted:
-            # 1) Salvar em CSV (append)
-            agora = datetime.now(fuso)
-            datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
-            ferramentas_str = "; ".join(f"{c} - {d}" for c, d in selecionadas)
-            new_row = [datahora, matricula, nome, tipo, ferramentas_str, observacoes]
-            with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
-                writer = csv.writer(f)
-                writer.writerow(new_row)
-
-            st.success("Movimentação registrada com sucesso!")
+            # Validações
+            if not matricula or not nome:
+                st.error("Informe uma matrícula válida antes de registrar.")
+            else:
+                valid_tools = [f for f in selecionadas if f[0] and f[1]]
+                if not valid_tools:
+                    st.error("Informe pelo menos uma ferramenta válida antes de registrar.")
+                else:
+                    # 1) Salvar em CSV (append)
+                    agora = datetime.now(fuso)
+                    datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
+                    ferramentas_str = "; ".join(f"{c} - {d}" for c, d in valid_tools)
+                    new_row = [datahora, matricula, nome, tipo, ferramentas_str, observacoes]
+                    with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
+                        writer = csv.writer(f)
+                        writer.writerow(new_row)
+                    st.success("Movimentação registrada com sucesso!")
 
 elif menu == "Relatório":
-    st.header("Relatório de Movimentações")
-    df_mov = pd.read_csv(mov_file, encoding='utf-8-sig')
-    st.dataframe(df_mov)
+    st.header("Relatório")
+    st.info("Esta página está desativada.")
 
 elif menu == "Colaborador":
     st.header("Colaborador")
