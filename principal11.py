@@ -3,7 +3,6 @@ import pandas as pd
 from datetime import datetime
 import pytz
 import os
-import csv
 
 # =========================
 # CONFIGURAÇÕES INICIAIS
@@ -11,10 +10,11 @@ import csv
 st.set_page_config(
     page_title="Ferramentaria - Controle de Movimentação",
     layout="wide",
-    page_icon="🛠️"
+    page_icon="🛠️",
+    initial_sidebar_state="expanded"
 )
 
-st.title("🛠️ Controle de Movimentação de Ferramentas")
+st.title("🛠️ Controle de Ferramentaria")
 
 # Fuso horário
 fuso = pytz.timezone('America/Sao_Paulo')
@@ -94,79 +94,116 @@ def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
 
 
 # =========================
+# MENU LATERAL
+# =========================
+menu = st.sidebar.radio(
+    "📑 Menu",
+    ["Movimentação", "Colaborador", "Ferramenta", "Relatório"]
+)
+
+# =========================
 # CARREGAMENTO DE DADOS
 # =========================
 colaboradores = carregar_colaboradores()
 ferramentas = carregar_ferramentas()
 
 # =========================
-# FORMULÁRIO
+# PÁGINAS DO MENU
 # =========================
-with st.form("formulario"):
 
-    col1, col2 = st.columns(2)
+# >>>>>>>>> MOVIMENTAÇÃO <<<<<<<<<<<
+if menu == "Movimentação":
+    st.subheader("📦 Movimentação de Ferramentas")
 
-    with col1:
-        matricula = st.text_input("Matrícula")
-        nome = ""
-        if matricula:
-            df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
-            if not df_col.empty:
-                nome = df_col['Nome'].values[0]
-        st.text_input("Nome", value=nome, disabled=True)
+    with st.form("formulario"):
 
-    with col2:
-        tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
-        qtd = st.number_input("Quantidade de Ferramentas", min_value=1, step=1, value=1)
+        col1, col2 = st.columns(2)
 
-    selecionadas = []
-    for i in range(qtd):
-        with st.expander(f"Ferramenta {i + 1}"):
-            codigo = st.text_input(f"Código da Ferramenta {i + 1}", key=f"cod_{i}")
-            desc = ""
-            if codigo:
-                df_ferr = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
-                if not df_ferr.empty:
-                    desc = df_ferr['Descricao'].values[0]
-            st.text_input(f"Descrição {i + 1}", value=desc, disabled=True, key=f"desc_{i}")
-            selecionadas.append((codigo, desc))
+        with col1:
+            matricula = st.text_input("Matrícula")
+            nome = ""
+            if matricula:
+                df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
+                if not df_col.empty:
+                    nome = df_col['Nome'].values[0]
+            st.text_input("Nome", value=nome, disabled=True)
 
-    observacoes = st.text_area("Observações (opcional)")
+        with col2:
+            tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
+            qtd = st.number_input("Quantidade de Ferramentas", min_value=1, step=1, value=1)
 
-    col3, col4 = st.columns([1, 5])
-    submit = col3.form_submit_button("✅ Confirmar Movimentação")
-    limpar = col4.form_submit_button("🧹 Limpar")
+        selecionadas = []
+        for i in range(qtd):
+            with st.expander(f"Ferramenta {i + 1}"):
+                codigo = st.text_input(f"Código da Ferramenta {i + 1}", key=f"cod_{i}")
+                desc = ""
+                if codigo:
+                    df_ferr = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
+                    if not df_ferr.empty:
+                        desc = df_ferr['Descricao'].values[0]
+                st.text_input(f"Descrição {i + 1}", value=desc, disabled=True, key=f"desc_{i}")
+                selecionadas.append((codigo, desc))
 
-# =========================
-# PROCESSAMENTO
-# =========================
-if limpar:
-    st.rerun()
+        observacoes = st.text_area("Observações (opcional)")
 
-if submit:
-    if not nome:
-        st.error("⚠️ Informe uma matrícula válida antes de registrar.")
-    else:
-        ferramentas_validas = [(c, d) for c, d in selecionadas if c and d]
-        if not ferramentas_validas:
-            st.error("⚠️ Informe pelo menos uma ferramenta válida antes de registrar.")
+        col3, col4 = st.columns([1, 5])
+        submit = col3.form_submit_button("✅ Confirmar Movimentação")
+        limpar = col4.form_submit_button("🧹 Limpar")
+
+    if limpar:
+        st.rerun()
+
+    if submit:
+        if not nome:
+            st.error("⚠️ Informe uma matrícula válida antes de registrar.")
         else:
-            ferramentas_str = "; ".join([f"{c} - {d}" for c, d in ferramentas_validas])
-            datahora = registrar_movimentacao(
-                matricula=matricula,
-                nome=nome,
-                tipo=tipo,
-                ferramentas=ferramentas_str,
-                observacoes=observacoes
-            )
+            ferramentas_validas = [(c, d) for c, d in selecionadas if c and d]
+            if not ferramentas_validas:
+                st.error("⚠️ Informe pelo menos uma ferramenta válida antes de registrar.")
+            else:
+                ferramentas_str = "; ".join([f"{c} - {d}" for c, d in ferramentas_validas])
+                datahora = registrar_movimentacao(
+                    matricula=matricula,
+                    nome=nome,
+                    tipo=tipo,
+                    ferramentas=ferramentas_str,
+                    observacoes=observacoes
+                )
 
-            st.success("✅ Movimentação registrada com sucesso!")
+                st.success("✅ Movimentação registrada com sucesso!")
 
-            resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes)
+                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes)
 
-            st.download_button(
-                label="📄 Baixar Resumo para Impressão",
-                data=resumo,
-                file_name=f"resumo_{matricula}_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt",
-                mime="text/plain"
-            )
+                st.download_button(
+                    label="📄 Baixar Resumo para Impressão",
+                    data=resumo,
+                    file_name=f"resumo_{matricula}_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt",
+                    mime="text/plain"
+                )
+
+# >>>>>>>>> COLABORADOR <<<<<<<<<<<
+elif menu == "Colaborador":
+    st.subheader("👥 Gerenciamento de Colaboradores")
+    st.info("🔧 Página em construção. Podemos criar aqui: adicionar, editar e excluir colaboradores.")
+
+# >>>>>>>>> FERRAMENTA <<<<<<<<<<<
+elif menu == "Ferramenta":
+    st.subheader("🛠️ Gerenciamento de Ferramentas")
+    st.info("🔧 Página em construção. Podemos criar aqui: cadastro, edição e controle de ferramentas.")
+
+# >>>>>>>>> RELATÓRIO <<<<<<<<<<<
+elif menu == "Relatório":
+    st.subheader("📑 Relatório de Movimentações")
+
+    try:
+        df_mov = pd.read_csv(arquivo_movimentacao, encoding='utf-8-sig')
+        st.dataframe(df_mov)
+
+        st.download_button(
+            label="⬇️ Baixar CSV de Movimentações",
+            data=df_mov.to_csv(index=False, encoding='utf-8-sig'),
+            file_name="relatorio_movimentacoes.csv",
+            mime="text/csv"
+        )
+    except:
+        st.warning("⚠️ Nenhuma movimentação registrada ainda.")
