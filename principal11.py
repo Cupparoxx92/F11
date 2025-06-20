@@ -49,8 +49,11 @@ menu = st.sidebar.radio(
 if menu == "Movimentação":
     st.header("Movimentação")
 
+    resumo_texto = ""
+    gerar_resumo = False
+
     with st.form("form_mov"):
-        matricula = st.text_input("Matrícula", key="matricula")
+        matricula = st.text_input("Matrícula")
         nome = ""
         if matricula:
             df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
@@ -93,38 +96,40 @@ if menu == "Movimentação":
                         writer.writerow(row)
                     st.success("Movimentação registrada com sucesso!")
 
-                    # Gerar arquivo de impressão
-                    resumo = f"""
-                    ============================================
-                              RESUMO DE MOVIMENTAÇÃO
-                    ============================================
-                    Data/Hora: {datahora}
-                    Nome: {nome}
-                    Matrícula: {matricula}
-                    Tipo: {tipo}
+                    # Criar texto do resumo para impressão
+                    resumo_texto = f"""
+============================================
+          RESUMO DE MOVIMENTAÇÃO
+============================================
+Data/Hora: {datahora}
+Nome: {nome}
+Matrícula: {matricula}
+Tipo: {tipo}
 
-                    Ferramentas:
-                    """
+Ferramentas:
+"""
                     for c, d in valid:
-                        resumo += f" - {c} - {d}\n"
+                        resumo_texto += f" - {c} - {d}\n"
 
-                    resumo += f"""
-                    \nObservações: {observacoes}
-                    \n\nAssinatura: ____________________________________________
-                    ============================================
-                    """
+                    resumo_texto += f"""
+Observações: {observacoes}
 
-                    with open("resumo_movimentacao.txt", "w", encoding="utf-8-sig") as file:
-                        file.write(resumo)
+Assinatura: ____________________________________________
 
-                    with open("resumo_movimentacao.txt", "r", encoding="utf-8-sig") as file:
-                        conteudo = file.read()
-                        st.download_button(
-                            label="📄 Baixar Resumo para Impressão",
-                            data=conteudo,
-                            file_name=f"resumo_{matricula}_{agora.strftime('%Y%m%d%H%M%S')}.txt",
-                            mime="text/plain"
-                        )
+============================================
+"""
+
+                    gerar_resumo = True
+
+
+    # Mostrar botão de download fora do formulário
+    if gerar_resumo and resumo_texto:
+        st.download_button(
+            label="📄 Baixar Resumo para Impressão",
+            data=resumo_texto,
+            file_name=f"resumo_{matricula}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+            mime="text/plain"
+        )
 
 elif menu == "Colaborador":
     st.header("Colaborador")
@@ -133,3 +138,4 @@ elif menu == "Colaborador":
 elif menu == "Ferramenta":
     st.header("Ferramenta")
     st.info("Página em construção.")
+
