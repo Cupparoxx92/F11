@@ -1,5 +1,9 @@
 import streamlit as st
 from datetime import datetime
+import pytz  # Biblioteca para fuso horário
+
+# Fuso horário local (Exemplo: Brasil)
+fuso = pytz.timezone('America/Sao_Paulo')
 
 # Configuração da página
 st.set_page_config(
@@ -20,10 +24,6 @@ menu = st.sidebar.radio(
 if menu == "Movimentação":
     st.header("Movimentação")
 
-    # Data e Hora atuais
-    data_atual = datetime.now().strftime('%d/%m/%Y')
-    hora_atual = datetime.now().strftime('%H:%M:%S')
-
     # Linha 1: Matrícula e Nome
     col1, col2 = st.columns(2)
     with col1:
@@ -34,13 +34,6 @@ if menu == "Movimentação":
     # Linha 2: Tipo de movimentação
     tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
 
-    # Linha 3: Data e Hora (somente visualização)
-    col3, col4 = st.columns(2)
-    with col3:
-        st.text_input("Data da Movimentação", value=data_atual, disabled=True)
-    with col4:
-        st.text_input("Hora da Movimentação", value=hora_atual, disabled=True)
-
     st.markdown("---")
 
     st.subheader("Ferramentas")
@@ -48,7 +41,7 @@ if menu == "Movimentação":
     # Lista para armazenar as ferramentas
     ferramentas = []
 
-    # Definir número de ferramentas que deseja adicionar
+    # Definir número de ferramentas
     qtd_ferramentas = st.number_input(
         "Quantidade de Ferramentas", min_value=1, step=1, value=1
     )
@@ -70,6 +63,11 @@ if menu == "Movimentação":
 
     # Botão Confirmar
     if st.button("Confirmar Movimentação"):
+        # Pega data e hora no momento do clique, com fuso horário local
+        agora = datetime.now(fuso)
+        data_atual = agora.strftime('%d/%m/%Y')
+        hora_atual = agora.strftime('%H:%M:%S')
+
         st.success("Movimentação registrada com sucesso!")
 
         st.subheader("Resumo da Movimentação:")
