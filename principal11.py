@@ -24,8 +24,8 @@ try:
 except:
     ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
 
-# Garantir que existe o arquivo de movimentações
-mov_file = 'movimentacoes.csv'
+# Arquivo de movimentações
+mov_file = 'movimentacao.csv'
 mov_header = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
 if not os.path.exists(mov_file):
     pd.DataFrame(columns=mov_header).to_csv(mov_file, index=False, encoding='utf-8-sig')
@@ -49,11 +49,8 @@ menu = st.sidebar.radio(
 if menu == "Movimentação":
     st.header("Movimentação")
 
-    resumo_texto = ""
-    gerar_resumo = False
-
     with st.form("form_mov"):
-        matricula = st.text_input("Matrícula")
+        matricula = st.text_input("Matrícula", key="matricula")
         nome = ""
         if matricula:
             df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
@@ -91,15 +88,17 @@ if menu == "Movimentação":
                     datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
                     tools_str = "; ".join(f"{c} - {d}" for c, d in valid)
                     row = [datahora, matricula, nome, tipo, tools_str, observacoes]
+
                     with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
                         writer = csv.writer(f)
                         writer.writerow(row)
+
                     st.success("Movimentação registrada com sucesso!")
 
-                    # Criar texto do resumo para impressão
-                    resumo_texto = f"""
+                    # Gerar arquivo de impressão
+                    resumo = f"""
 ============================================
-          RESUMO DE MOVIMENTAÇÃO
+           RESUMO DE MOVIMENTAÇÃO
 ============================================
 Data/Hora: {datahora}
 Nome: {nome}
@@ -109,28 +108,26 @@ Tipo: {tipo}
 Ferramentas:
 """
                     for c, d in valid:
-                        resumo_texto += f" - {c} - {d}\n"
+                        resumo += f" - {c} - {d}\n"
 
-                    resumo_texto += f"""
+                    resumo += f"""
 Observações: {observacoes}
 
 Assinatura: ____________________________________________
 
 ============================================
-"""
+                    """
 
-                    gerar_resumo = True
+                    st.text_area("Resumo da Movimentação", resumo, height=300)
 
+                    st.download_button(
+                        label="📄 Baixar Resumo para Impressão",
+                        data=resumo,
+                        file_name=f"resumo_{matricula}_{agora.strftime('%Y%m%d%H%M%S')}.txt",
+                        mime="text/plain"
+                    )
 
-    # Mostrar botão de download fora do formulário
-    if gerar_resumo and resumo_texto:
-        st.download_button(
-            label="📄 Baixar Resumo para Impressão",
-            data=resumo_texto,
-            file_name=f"resumo_{matricula}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-            mime="text/plain"
-        )
-
+# ——————————————————————————————————————————————————————————————
 elif menu == "Colaborador":
     st.header("Colaborador")
     st.info("Página em construção.")
@@ -138,4 +135,3 @@ elif menu == "Colaborador":
 elif menu == "Ferramenta":
     st.header("Ferramenta")
     st.info("Página em construção.")
-
