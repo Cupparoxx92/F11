@@ -5,72 +5,75 @@ import pytz
 import os
 import csv
 
-# ==============================
-# CONFIGURAÇÕES INICIAIS
-# ==============================
-st.set_page_config(page_title="Controle de Ferramentas", layout="wide")
+# ======================== CONFIGURAÇÕES ========================
 
-# Fuso horário
+st.set_page_config(
+    page_title="Controle de Ferramentas",
+    layout="wide",
+)
+
+# Fuso horário Brasil
 fuso = pytz.timezone('America/Sao_Paulo')
 
-# Inicializar controle do download
+# Inicializar variáveis de sessão
 if 'mostrar_download' not in st.session_state:
     st.session_state.mostrar_download = False
 
-# ==============================
-# CARREGAMENTO DOS DADOS
-# ==============================
+if 'limpar' not in st.session_state:
+    st.session_state.limpar = False
 
-# Arquivos principais
-arquivo_colaboradores = 'colaboradores.csv'
-arquivo_ferramentas = 'ferramentas.csv'
-arquivo_movimentacoes = 'movimentacao.csv'
 
-# Carregar colaboradores
+# =================== CARREGAR BASES ======================
+
+# Colaboradores
 try:
-    colaboradores = pd.read_csv(arquivo_colaboradores, encoding='utf-8-sig')
+    colaboradores = pd.read_csv('colaboradores.csv', encoding='utf-8-sig')
     colaboradores.columns = colaboradores.columns.str.strip()
 except:
     colaboradores = pd.DataFrame(columns=['Matricula', 'Nome'])
 
-# Carregar ferramentas
+# Ferramentas
 try:
-    ferramentas = pd.read_csv(arquivo_ferramentas, encoding='utf-8-sig')
+    ferramentas = pd.read_csv('ferramentas.csv', encoding='utf-8-sig')
     ferramentas.columns = ferramentas.columns.str.strip()
     ferramentas.rename(columns={'Descrição': 'Descricao'}, inplace=True)
 except:
     ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
 
-# Criar arquivo movimentação se não existir
-if not os.path.exists(arquivo_movimentacoes):
-    pd.DataFrame(columns=['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']) \
-      .to_csv(arquivo_movimentacoes, index=False, encoding='utf-8-sig')
+# Movimentações
+mov_file = 'movimentacao.csv'
+mov_header = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
+if not os.path.exists(mov_file):
+    pd.DataFrame(columns=mov_header).to_csv(mov_file, index=False, encoding='utf-8-sig')
 
-# ==============================
-# INTERFACE
-# ==============================
+# ===================== INTERFACE ======================
 
-st.title("🔧 Controle de Movimentação de Ferramentas")
+st.title("📦 Controle de Movimentação de Ferramentas")
 
-with st.form("form_mov"):
+# LIMPAR FORMULÁRIO
+if st.button("🧹 Limpar Formulário"):
+    st.session_state.limpar = True
+    st.session_state.mostrar_download = False
+    st.experimental_rerun()
 
-    col1, col2 = st.columns(2)
 
-    with col1:
-        matricula = st.text_input("Matrícula")
-        nome = ""
-        if matricula:
-            df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
-            if not df_col.empty:
-                nome = df_col['Nome'].values[0]
-        st.text_input("Nome", value=nome, disabled=True)
+with st.form("formulario"):
+    # Matricula
+    matricula = st.text_input("Matrícula")
+    nome = ""
 
-    with col2:
-        tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
-        qtd = st.number_input("Quantidade de Ferramentas", min_value=1, value=1, step=1)
+    if matricula:
+        df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
+        if not df_col.empty:
+            nome = df_col['Nome'].values[0]
+
+    st.text_input("Nome", value=nome, disabled=True)
+
+    tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
+
+    qtd = st.number_input("Quantidade de Ferramentas", min_value=1, value=1, step=1)
 
     selecionadas = []
-
     for i in range(qtd):
         with st.expander(f"Ferramenta {i+1}"):
             codigo = st.text_input(f"Código da Ferramenta {i+1}", key=f"cod{i}")
@@ -84,31 +87,27 @@ with st.form("form_mov"):
 
     observacoes = st.text_area("Observações (opcional)")
 
-    col_btn1, col_btn2 = st.columns(2)
-    confirmar = col_btn1.form_submit_button("✅ Confirmar Movimentação")
-    limpar = col_btn2.form_submit_button("🧹 Limpar")
+    confirmar = st.form_submit_button("✅ Confirmar Movimentação")
 
-    # ==============================
-    # AÇÕES DOS BOTÕES
-    # ==============================
 
+    # ===================== AÇÃO AO CONFIRMAR ======================
     if confirmar:
         if not nome:
-            st.error("Informe uma matrícula válida antes de registrar.")
+            st.error("⚠️ Informe uma matrícula válida antes de registrar.")
+            st.session_state.mostrar_download = False
         else:
-            validas = [(c, d) for c, d in selecionadas if c and d]
-            if not validas:
-                st.error("Informe pelo menos uma ferramenta válida antes de registrar.")
+            ferramentas_validas = [(c, d) for c, d in selecionadas if c and d]
+            if not ferramentas_validas:
+                st.error("⚠️ Informe pelo menos uma ferramenta válida antes de registrar.")
+                st.session_state.mostrar_download = False
             else:
                 agora = datetime.now(fuso)
                 datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
-
-                ferramentas_str = "; ".join([f"{c} - {d}" for c, d in validas])
+                ferramentas_str = "; ".join([f"{c} - {d}" for c, d in ferramentas_validas])
 
                 nova_linha = [datahora, matricula, nome, tipo, ferramentas_str, observacoes]
 
-                # Salvar no CSV
-                with open(arquivo_movimentacoes, 'a', newline='', encoding='utf-8-sig') as f:
+                with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
                     writer = csv.writer(f)
                     writer.writerow(nova_linha)
 
@@ -116,9 +115,9 @@ with st.form("form_mov"):
 
                 # Gerar resumo para impressão
                 resumo = f"""
-====================================================
-                RESUMO DE MOVIMENTAÇÃO
-====================================================
+========================================
+           RESUMO DE MOVIMENTAÇÃO
+========================================
 Data/Hora: {datahora}
 Nome: {nome}
 Matrícula: {matricula}
@@ -126,36 +125,33 @@ Tipo: {tipo}
 
 Ferramentas:
 """
-                for c, d in validas:
+                for c, d in ferramentas_validas:
                     resumo += f" - {c} - {d}\n"
 
                 resumo += f"""
-\nObservações: {observacoes}
+Observações: {observacoes}
 
-\nAssinatura: ____________________________________________
-
-====================================================
+Assinatura: ___________________________________________
+========================================
 """
 
+                # Salvar resumo em arquivo temporário
                 with open("resumo_movimentacao.txt", "w", encoding="utf-8-sig") as file:
                     file.write(resumo)
 
+                # Ativa o botão de download
                 st.session_state.mostrar_download = True
 
-    if limpar:
-        st.session_state.mostrar_download = False
-        st.experimental_rerun()
 
-# ==============================
-# BOTÃO DE DOWNLOAD DO RESUMO
-# ==============================
-
+# ==================== BOTÃO DE IMPRESSÃO ====================
 if st.session_state.mostrar_download:
     with open("resumo_movimentacao.txt", "r", encoding="utf-8-sig") as file:
         conteudo = file.read()
+
     st.download_button(
         label="📄 Baixar Resumo para Impressão",
         data=conteudo,
         file_name=f"resumo_{matricula}_{datetime.now(fuso).strftime('%Y%m%d%H%M%S')}.txt",
         mime="text/plain"
     )
+
