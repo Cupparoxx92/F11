@@ -8,7 +8,7 @@ from relatorio import pagina_relatorio
 from colaborador import pagina_colaborador
 
 # =========================
-# CONFIGURAÇÕES INICIAIS
+# CONFIGURAÇÕES
 # =========================
 st.set_page_config(
     page_title="Ferramentaria - Controle de Movimentação",
@@ -27,8 +27,8 @@ arquivo_movimentacao = 'movimentacao.csv'
 arquivo_colaboradores = 'colaboradores.csv'
 arquivo_ferramentas = 'ferramentas.csv'
 
-# Cabeçalho da movimentação
 cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
+
 
 # =========================
 # FUNÇÕES AUXILIARES
@@ -110,10 +110,7 @@ def ferramenta_disponivel(codigo):
         return True
 
     ultima_mov = df.iloc[-1]
-    if 'Retirada' in ultima_mov['Tipo']:
-        return False
-    else:
-        return True
+    return ultima_mov['Tipo'] != 'Retirada'
 
 
 # =========================
@@ -129,6 +126,7 @@ menu = st.sidebar.radio(
 # =========================
 colaboradores = carregar_colaboradores()
 ferramentas = carregar_ferramentas()
+
 
 # =========================
 # PÁGINAS DO MENU
@@ -154,15 +152,13 @@ if menu == "Movimentação":
             tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
             qtd = st.number_input("Quantidade de Ferramentas", min_value=1, step=1, value=1)
 
-        # Ferramentas
         selecionadas = []
         erro_ferramenta = False
 
         for i in range(qtd):
-            with st.expander(f"Ferramenta {i + 1}"):
+            with st.expander(f"🔧 Ferramenta {i + 1}"):
                 codigo = st.text_input(f"Código da Ferramenta {i + 1}", key=f"cod_{i}")
                 desc = ""
-
                 if codigo:
                     df_ferr = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
                     if not df_ferr.empty:
@@ -170,11 +166,10 @@ if menu == "Movimentação":
 
                         if tipo == "Retirada":
                             if not ferramenta_disponivel(codigo):
-                                st.error(f"⚠️ A ferramenta {codigo} - {desc} já está retirada! Faça a devolução antes.")
+                                st.error(
+                                    f"⚠️ A ferramenta {codigo} - {desc} já está retirada! Faça a devolução antes.")
                                 erro_ferramenta = True
                                 desc = ""
-                    else:
-                        st.warning(f"⚠️ Código {codigo} não encontrado.")
 
                 st.text_input(f"Descrição {i + 1}", value=desc, disabled=True, key=f"desc_{i}")
                 selecionadas.append((codigo, desc))
@@ -222,14 +217,17 @@ if menu == "Movimentação":
                     mime="text/plain"
                 )
 
+
 # >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
     pagina_colaborador()
 
+
 # >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
     st.subheader("🛠️ Gerenciamento de Ferramentas")
-    st.info("🔧 Página em construção.")
+    st.info("🔧 Página em construção. Podemos futuramente cadastrar e editar ferramentas aqui.")
+
 
 # >>>>>>>>> RELATÓRIO <<<<<<<<<<<
 elif menu == "Relatório":
