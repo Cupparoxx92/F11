@@ -60,7 +60,7 @@ if menu == "Movimentação":
             f"Observações: {observacoes}"
         )
 
-# Outras páginas (placeholders)
+# Outras páginas (em construção)
 elif menu == "Colaborador":
     st.header("Colaborador")
     st.info("Página em construção.")
@@ -72,3 +72,4 @@ elif menu == "Ferramenta":
 elif menu == "Relatório":
     st.header("Relatório")
     st.info("Página em construção.")
+
