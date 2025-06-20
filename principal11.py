@@ -4,7 +4,10 @@ from datetime import datetime
 import pytz
 import os
 
+# Importa os módulos
 from relatorio import pagina_relatorio
+from colaborador import pagina_colaborador
+
 
 # =========================
 # CONFIGURAÇÕES INICIAIS
@@ -127,20 +130,22 @@ ferramentas = carregar_ferramentas()
 # =========================
 # PÁGINAS DO MENU
 # =========================
+
 if menu == "Movimentação":
     st.subheader("📦 Movimentação de Ferramentas")
 
-    with st.form("formulario", clear_on_submit=False):
+    with st.form("formulario"):
+
         col1, col2 = st.columns(2)
 
         with col1:
-            matricula = st.text_input("Matrícula", key="matricula")
+            matricula = st.text_input("Matrícula")
             nome = ""
             if matricula:
                 df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
                 if not df_col.empty:
                     nome = df_col['Nome'].values[0]
-            st.text_input("Nome", value=nome, disabled=True, key="nome")
+            st.text_input("Nome", value=nome, disabled=True)
 
         with col2:
             tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
@@ -167,8 +172,8 @@ if menu == "Movimentação":
                 st.text_input(f"Descrição {i + 1}", value=desc, disabled=True, key=f"desc_{i}")
                 selecionadas.append((codigo, desc))
 
-        observacoes = st.text_area("Observações (opcional)", key="observacoes")
-        sem_obs = st.checkbox("✔️ Sem Observações", key="semobs")
+        observacoes = st.text_area("Observações (opcional)")
+        sem_obs = st.checkbox("✔️ Sem Observações")
 
         col3, col4 = st.columns([1, 5])
         submit = col3.form_submit_button("✅ Confirmar Movimentação")
@@ -200,7 +205,7 @@ if menu == "Movimentação":
 
                 st.success("✅ Movimentação registrada com sucesso!")
 
-                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes if observacoes else "Sem Observações")
+                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes)
 
                 st.download_button(
                     label="📄 Baixar Resumo para Impressão",
@@ -210,8 +215,7 @@ if menu == "Movimentação":
                 )
 
 elif menu == "Colaborador":
-    st.subheader("👥 Gerenciamento de Colaboradores")
-    st.info("🔧 Página em construção.")
+    pagina_colaborador()
 
 elif menu == "Ferramenta":
     st.subheader("🛠️ Gerenciamento de Ferramentas")
