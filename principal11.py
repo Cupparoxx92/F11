@@ -1,4 +1,5 @@
 import streamlit as st
+from datetime import datetime
 
 # Configuração da página
 st.set_page_config(
@@ -37,11 +38,26 @@ if menu == "Movimentação":
     # Linha 3: Tipo de movimentação
     tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
 
+    # Linha 4: Data e Hora da movimentação
+    data_hora = st.datetime_input(
+        "Data e Hora da Movimentação",
+        value=datetime.now()
+    )
+
+    # Linha 5: Observações
+    observacoes = st.text_area("Observações (opcional)")
+
     # Botão confirmar
     if st.button("Confirmar Movimentação"):
         st.success(
-            f"Movimentação registrada com sucesso!\n"
-            f"Matrícula: {matricula} | Ferramenta: {ferramenta} | Tipo: {tipo}"
+            f"Movimentação registrada com sucesso!\n\n"
+            f"Matrícula: {matricula}\n"
+            f"Nome: {nome}\n"
+            f"Ferramenta: {ferramenta}\n"
+            f"Descrição: {descricao}\n"
+            f"Tipo: {tipo}\n"
+            f"Data/Hora: {data_hora}\n"
+            f"Observações: {observacoes}"
         )
 
 # Outras páginas (placeholders)
