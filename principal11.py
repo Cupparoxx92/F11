@@ -26,10 +26,8 @@ st.title("🛠️ Controle de Ferramentaria")
 arquivo_movimentacao = 'movimentacao.csv'
 arquivo_colaboradores = 'colaboradores.csv'
 arquivo_ferramentas = 'ferramentas.csv'
-arquivo_log = 'loger.csv'
 
-# Cabeçalho do arquivo movimentacao
-cabecalho_mov = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramenta', 'Observacoes']
+cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramenta', 'Observacoes']
 
 # =========================
 # Fuso horário
@@ -42,7 +40,7 @@ fuso = pytz.timezone('America/Sao_Paulo')
 # =========================
 def inicializar_arquivo_movimentacao():
     if not os.path.exists(arquivo_movimentacao):
-        pd.DataFrame(columns=cabecalho_mov).to_csv(arquivo_movimentacao, index=False, encoding='utf-8-sig')
+        pd.DataFrame(columns=cabecalho).to_csv(arquivo_movimentacao, index=False, encoding='utf-8-sig')
 
 
 def carregar_colaboradores():
@@ -61,22 +59,6 @@ def carregar_ferramentas():
         return df
     except:
         return pd.DataFrame(columns=['Codigo', 'Descricao', 'StatusConserto'])
-
-
-def registrar_log(matricula, nome, acao, detalhes):
-    datahora = datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S')
-    log = pd.DataFrame([{
-        'DataHora': datahora,
-        'Matricula': matricula,
-        'Nome': nome,
-        'Ação': acao,
-        'Detalhes': detalhes
-    }])
-
-    if not os.path.exists(arquivo_log):
-        log.to_csv(arquivo_log, index=False, encoding='utf-8-sig')
-    else:
-        log.to_csv(arquivo_log, mode='a', index=False, header=False, encoding='utf-8-sig')
 
 
 def ferramenta_disponivel(codigo):
@@ -99,30 +81,11 @@ def ferramenta_disponivel(codigo):
 
 
 # =========================
-# CARREGAR DADOS
+# CARREGAMENTO DE DADOS
 # =========================
 colaboradores = carregar_colaboradores()
 ferramentas = carregar_ferramentas()
 
-# =========================
-# PEGAR MATRÍCULA DO USUÁRIO
-# =========================
-matricula = st.sidebar.text_input("🔑 Digite sua matrícula para acessar:")
-
-nome_usuario = ""
-df_user = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
-if not df_user.empty:
-    nome_usuario = df_user['Nome'].values[0]
-    st.sidebar.success(f"✅ Bem-vindo, {nome_usuario}!")
-else:
-    st.sidebar.warning("⚠️ Digite uma matrícula válida.")
-
-if not nome_usuario:
-    st.warning("Digite sua matrícula no menu lateral para começar.")
-    st.stop()
-
-# Registrar login
-registrar_log(matricula, nome_usuario, 'Login', 'Acesso ao sistema')
 
 # =========================
 # MENU
@@ -142,8 +105,13 @@ if menu == "Movimentação":
         col1, col2 = st.columns(2)
 
         with col1:
-            st.text_input("Matrícula", value=matricula, disabled=True)
-            st.text_input("Nome", value=nome_usuario, disabled=True)
+            matricula = st.text_input("Matrícula", key="matricula")
+            nome = ""
+            if matricula:
+                df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
+                if not df_col.empty:
+                    nome = df_col['Nome'].values[0]
+            st.text_input("Nome", value=nome, disabled=True, key="nome")
 
         with col2:
             tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
@@ -182,7 +150,9 @@ if menu == "Movimentação":
         st.experimental_rerun()
 
     if submit:
-        if erro_ferramenta:
+        if not nome:
+            st.error("⚠️ Informe uma matrícula válida antes de registrar.")
+        elif erro_ferramenta:
             st.error("⚠️ Corrija os erros nas ferramentas antes de registrar.")
         elif not observacoes and not sem_obs:
             st.error("⚠️ Preencha Observações ou marque 'Sem Observações'.")
@@ -198,7 +168,7 @@ if menu == "Movimentação":
                     df = pd.DataFrame([{
                         'DataHora': datahora,
                         'Matricula': matricula,
-                        'Nome': nome_usuario,
+                        'Nome': nome,
                         'Tipo': tipo,
                         'Ferramenta': f"{cod} - {desc}",
                         'Observacoes': observacoes if observacoes else "Sem Observações"
@@ -207,19 +177,16 @@ if menu == "Movimentação":
                     df.to_csv(arquivo_movimentacao, mode='a', index=False, header=not os.path.exists(arquivo_movimentacao),
                                encoding='utf-8-sig')
 
-                registrar_log(matricula, nome_usuario, tipo, f"{len(ferramentas_validas)} ferramentas movimentadas")
-
                 st.success("✅ Movimentação registrada com sucesso!")
 
 # >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
-    pagina_colaborador(matricula, nome_usuario)
+    pagina_colaborador()
 
 # >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
-    pagina_ferramenta(matricula, nome_usuario)
+    pagina_ferramenta()
 
 # >>>>>>>>> RELATÓRIO <<<<<<<<<<<
 elif menu == "Relatório":
     pagina_relatorio()
-
