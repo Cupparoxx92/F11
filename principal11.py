@@ -1,9 +1,13 @@
 import streamlit as st
 from datetime import datetime
-import pytz  # Biblioteca para fuso horário
+import pandas as pd
+import pytz
 
-# Fuso horário local (Exemplo: Brasil)
+# Fuso horário
 fuso = pytz.timezone('America/Sao_Paulo')
+
+# Carregar base de colaboradores
+colaboradores = pd.read_csv('colaboradores.csv')
 
 # Configuração da página
 st.set_page_config(
@@ -29,7 +33,15 @@ if menu == "Movimentação":
     with col1:
         matricula = st.text_input("Matrícula")
     with col2:
-        nome = st.text_input("Nome", value="", disabled=True)
+        # Buscar nome pela matrícula
+        nome = ""
+        if matricula:
+            resultado = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
+            if not resultado.empty:
+                nome = resultado['Nome'].values[0]
+            else:
+                nome = "Matrícula não encontrada"
+        st.text_input("Nome", value=nome, disabled=True)
 
     # Linha 2: Tipo de movimentação
     tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
@@ -41,7 +53,7 @@ if menu == "Movimentação":
     # Lista para armazenar as ferramentas
     ferramentas = []
 
-    # Definir número de ferramentas
+    # Definir quantidade de ferramentas
     qtd_ferramentas = st.number_input(
         "Quantidade de Ferramentas", min_value=1, step=1, value=1
     )
@@ -63,7 +75,6 @@ if menu == "Movimentação":
 
     # Botão Confirmar
     if st.button("Confirmar Movimentação"):
-        # Pega data e hora no momento do clique, com fuso horário local
         agora = datetime.now(fuso)
         data_atual = agora.strftime('%d/%m/%Y')
         hora_atual = agora.strftime('%H:%M:%S')
@@ -94,3 +105,4 @@ elif menu == "Ferramenta":
 elif menu == "Relatório":
     st.header("Relatório")
     st.info("Página em construção.")
+
