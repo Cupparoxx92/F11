@@ -6,44 +6,101 @@ import os
 import csv
 
 # =========================
-# Configurações Iniciais
+# CONFIGURAÇÕES INICIAIS
 # =========================
 st.set_page_config(
-    page_title="Controle de Ferramentas",
+    page_title="Ferramentaria - Controle de Movimentação",
     layout="wide",
-    page_icon="🔧"
+    page_icon="🛠️"
 )
 
-st.title("🔧 Registrar Movimentação")
+st.title("🛠️ Controle de Movimentação de Ferramentas")
 
 # Fuso horário
 fuso = pytz.timezone('America/Sao_Paulo')
 
-# =========================
-# Carregar os Dados
-# =========================
-try:
-    colaboradores = pd.read_csv('colaboradores.csv', encoding='utf-8-sig')
-    colaboradores.columns = colaboradores.columns.str.strip()
-except:
-    colaboradores = pd.DataFrame(columns=['Matricula', 'Nome'])
+# Arquivos
+arquivo_movimentacao = 'movimentacao.csv'
+arquivo_colaboradores = 'colaboradores.csv'
+arquivo_ferramentas = 'ferramentas.csv'
 
-try:
-    ferramentas = pd.read_csv('ferramentas.csv', encoding='utf-8-sig')
-    ferramentas.columns = ferramentas.columns.str.strip()
-    ferramentas.rename(columns={'Descrição': 'Descricao'}, inplace=True)
-except:
-    ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
-
-# Arquivo de movimentações
-mov_file = 'movimentacao.csv'
-mov_header = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
-
-if not os.path.exists(mov_file):
-    pd.DataFrame(columns=mov_header).to_csv(mov_file, index=False, encoding='utf-8-sig')
+# Cabeçalho da movimentação
+cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
 
 # =========================
-# Formulário
+# FUNÇÕES AUXILIARES
+# =========================
+def inicializar_arquivo_movimentacao():
+    if not os.path.exists(arquivo_movimentacao):
+        pd.DataFrame(columns=cabecalho).to_csv(arquivo_movimentacao, index=False, encoding='utf-8-sig')
+
+def carregar_colaboradores():
+    try:
+        df = pd.read_csv(arquivo_colaboradores, encoding='utf-8-sig')
+        df.columns = df.columns.str.strip()
+        return df
+    except:
+        return pd.DataFrame(columns=['Matricula', 'Nome'])
+
+def carregar_ferramentas():
+    try:
+        df = pd.read_csv(arquivo_ferramentas, encoding='utf-8-sig')
+        df.columns = df.columns.str.strip()
+        df.rename(columns={'Descrição': 'Descricao'}, inplace=True)
+        return df
+    except:
+        return pd.DataFrame(columns=['Codigo', 'Descricao'])
+
+def registrar_movimentacao(matricula, nome, tipo, ferramentas, observacoes):
+    inicializar_arquivo_movimentacao()
+    datahora = datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S')
+
+    dados = {
+        'DataHora': datahora,
+        'Matricula': matricula,
+        'Nome': nome,
+        'Tipo': tipo,
+        'Ferramentas': ferramentas,
+        'Observacoes': observacoes
+    }
+
+    df = pd.DataFrame([dados])
+    df.to_csv(arquivo_movimentacao, mode='a', index=False, header=False, encoding='utf-8-sig')
+
+    return datahora
+
+
+def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
+    resumo = f"""
+    =============================================
+                 RESUMO DE MOVIMENTAÇÃO
+    =============================================
+    Data/Hora: {datahora}
+    Nome: {nome}
+    Matrícula: {matricula}
+    Tipo de Movimentação: {tipo}
+
+    Ferramentas:
+    """
+    for c, d in ferramentas:
+        resumo += f" - {c} - {d}\n"
+
+    resumo += f"""
+    \nObservações: {observacoes}
+    \n\nAssinatura: ____________________________________________
+    =============================================
+    """
+    return resumo
+
+
+# =========================
+# CARREGAMENTO DE DADOS
+# =========================
+colaboradores = carregar_colaboradores()
+ferramentas = carregar_ferramentas()
+
+# =========================
+# FORMULÁRIO
 # =========================
 with st.form("formulario"):
 
@@ -81,7 +138,7 @@ with st.form("formulario"):
     limpar = col4.form_submit_button("🧹 Limpar")
 
 # =========================
-# Processamento
+# PROCESSAMENTO
 # =========================
 if limpar:
     st.rerun()
@@ -94,40 +151,19 @@ if submit:
         if not ferramentas_validas:
             st.error("⚠️ Informe pelo menos uma ferramenta válida antes de registrar.")
         else:
-            agora = datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S')
             ferramentas_str = "; ".join([f"{c} - {d}" for c, d in ferramentas_validas])
-
-            nova_mov = [agora, matricula, nome, tipo, ferramentas_str, observacoes]
-
-            with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
-                writer = csv.writer(f)
-                writer.writerow(nova_mov)
+            datahora = registrar_movimentacao(
+                matricula=matricula,
+                nome=nome,
+                tipo=tipo,
+                ferramentas=ferramentas_str,
+                observacoes=observacoes
+            )
 
             st.success("✅ Movimentação registrada com sucesso!")
 
-            # Gerar resumo para impressão
-            resumo = f"""
-            =============================================
-                       RESUMO DE MOVIMENTAÇÃO
-            =============================================
-            Data/Hora: {agora}
-            Nome: {nome}
-            Matrícula: {matricula}
-            Tipo de Movimentação: {tipo}
+            resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas, observacoes)
 
-            Ferramentas:
-            """
-
-            for c, d in ferramentas_validas:
-                resumo += f" - {c} - {d}\n"
-
-            resumo += f"""
-            \nObservações: {observacoes}
-            \n\nAssinatura: _______________________________________
-            =============================================
-            """
-
-            # Download do resumo
             st.download_button(
                 label="📄 Baixar Resumo para Impressão",
                 data=resumo,
