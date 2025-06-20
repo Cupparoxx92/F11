@@ -26,14 +26,19 @@ except Exception as e:
     st.error(f"Erro ao ler 'ferramentas.csv': {e}")
     ferramentas = pd.DataFrame(columns=['Codigo', 'Descricao'])
 
+# 4) Garantir que exista o arquivo de movimentações com cabeçalho
+mov_file = 'movimentacoes.csv'
+mov_header = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
+if not os.path.exists(mov_file):
+    pd.DataFrame(columns=mov_header).to_csv(mov_file, index=False, encoding='utf-8-sig')
+
 # ——————————————————————————————————————————————————————————————
-# Configuração geral da página
+# Configuração da página
 st.set_page_config(
     page_title="Ferramentaria",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 st.title("Ferramentaria")
 
 # Menu lateral
@@ -79,29 +84,21 @@ if menu == "Movimentação":
         submitted = st.form_submit_button("Confirmar Movimentação")
 
         if submitted:
-            # 1) Salvar em CSV
+            # 1) Salvar em CSV (append)
             agora = datetime.now(fuso)
             datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
             ferramentas_str = "; ".join(f"{c} - {d}" for c, d in selecionadas)
-            file_path = 'movimentacoes.csv'
-            header = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoes']
             new_row = [datahora, matricula, nome, tipo, ferramentas_str, observacoes]
-            write_header = not os.path.exists(file_path)
-            with open(file_path, 'a', newline='', encoding='utf-8-sig') as f:
+            with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
                 writer = csv.writer(f)
-                if write_header:
-                    writer.writerow(header)
                 writer.writerow(new_row)
 
             st.success("Movimentação registrada com sucesso!")
 
 elif menu == "Relatório":
     st.header("Relatório de Movimentações")
-    try:
-        df_mov = pd.read_csv('movimentacoes.csv', encoding='utf-8-sig')
-        st.dataframe(df_mov)
-    except FileNotFoundError:
-        st.info("Ainda não há movimentações registradas.")
+    df_mov = pd.read_csv(mov_file, encoding='utf-8-sig')
+    st.dataframe(df_mov)
 
 elif menu == "Colaborador":
     st.header("Colaborador")
