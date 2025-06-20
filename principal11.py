@@ -33,98 +33,98 @@ st.title("Ferramentaria")
 
 menu = st.sidebar.radio("Menu", ["Movimentação", "Colaborador", "Ferramenta"])
 
-# Variável de controle no session_state
-if 'gerar_resumo' not in st.session_state:
-    st.session_state.gerar_resumo = False
-    st.session_state.resumo_arquivo = ""
-    st.session_state.matricula_atual = ""
+# Controle de sessão
+if 'dados_carregados' not in st.session_state:
+    st.session_state.dados_carregados = False
+    st.session_state.nome = ""
+    st.session_state.ferramentas_preenchidas = {}
 
-# MOVIMENTAÇÃO
+# Página Movimentação
 if menu == "Movimentação":
-    st.header("Movimentação")
+    st.subheader("Movimentação de Ferramentas")
 
-    with st.form("form_mov"):
+    with st.form("form_busca"):
         matricula = st.text_input("Matrícula")
-        nome = ""
-        if matricula:
+        buscar = st.form_submit_button("🔍 Buscar Dados")
+
+        if buscar:
             df_col = colaboradores[colaboradores['Matricula'].astype(str) == matricula]
             if not df_col.empty:
-                nome = df_col['Nome'].values[0]
-        st.text_input("Nome", value=nome, disabled=True)
+                st.session_state.nome = df_col['Nome'].values[0]
+                st.session_state.dados_carregados = True
+            else:
+                st.error("Matrícula não encontrada.")
+                st.session_state.dados_carregados = False
+
+    if st.session_state.dados_carregados:
+        st.success(f"Colaborador: {st.session_state.nome}")
 
         tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
         qtd = st.number_input("Quantidade de Ferramentas", min_value=1, value=1, step=1)
 
-        selecionadas = []
+        ferramentas_selecionadas = []
+
         for i in range(qtd):
             with st.expander(f"Ferramenta {i+1}"):
-                codigo = st.text_input(f"Código da Ferramenta {i+1}", key=f"cod{i}")
+                cod = st.text_input(f"Código da Ferramenta {i+1}", key=f"cod{i}")
+
                 desc = ""
-                if codigo:
-                    df_f = ferramentas[ferramentas['Codigo'].astype(str) == codigo]
-                    if not df_f.empty:
-                        desc = df_f['Descricao'].values[0]
+                df_f = ferramentas[ferramentas['Codigo'].astype(str) == cod]
+                if not df_f.empty:
+                    desc = df_f['Descricao'].values[0]
+
                 st.text_input(f"Descrição {i+1}", value=desc, disabled=True, key=f"desc{i}")
-                selecionadas.append((codigo, desc))
+
+                ferramentas_selecionadas.append((cod, desc))
 
         observacoes = st.text_area("Observações (opcional)")
 
-        submit = st.form_submit_button("Confirmar Movimentação")
+        confirmar = st.button("✅ Confirmar Movimentação")
 
-        if submit:
-            if not nome:
-                st.error("Informe uma matrícula válida antes de registrar.")
+        if confirmar:
+            ferramentas_validas = [(c, d) for c, d in ferramentas_selecionadas if c and d]
+
+            if not ferramentas_validas:
+                st.error("Informe pelo menos uma ferramenta válida.")
             else:
-                valid = [(c, d) for c, d in selecionadas if c and d]
-                if not valid:
-                    st.error("Informe pelo menos uma ferramenta válida antes de registrar.")
-                else:
-                    agora = datetime.now(fuso)
-                    datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
-                    tools_str = "; ".join(f"{c} - {d}" for c, d in valid)
+                agora = datetime.now(fuso)
+                datahora = agora.strftime('%d/%m/%Y %H:%M:%S')
+                tools_str = "; ".join(f"{c} - {d}" for c, d in ferramentas_validas)
 
-                    row = [datahora, matricula, nome, tipo, tools_str, observacoes]
+                row = [datahora, matricula, st.session_state.nome, tipo, tools_str, observacoes]
 
-                    # Registrar no CSV
-                    with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
-                        writer = csv.writer(f)
-                        writer.writerow(row)
+                with open(mov_file, 'a', newline='', encoding='utf-8-sig') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(row)
 
-                    st.success("Movimentação registrada com sucesso!")
+                st.success("Movimentação registrada com sucesso!")
 
-                    # Gerar resumo
-                    resumo = f"""
+                # Gerar resumo
+                resumo = f"""
 ============================================
             RESUMO DE MOVIMENTAÇÃO
 ============================================
 Data/Hora: {datahora}
-Nome: {nome}
+Nome: {st.session_state.nome}
 Matrícula: {matricula}
 Tipo: {tipo}
 
 Ferramentas:
 """
-                    for c, d in valid:
-                        resumo += f" - {c} - {d}\n"
+                for c, d in ferramentas_validas:
+                    resumo += f" - {c} - {d}\n"
 
-                    resumo += f"""
+                resumo += f"""
 Observações: {observacoes}
 
 Assinatura: ____________________________________________
 
 ============================================
-                    """
+                """
 
-                    st.session_state.gerar_resumo = True
-                    st.session_state.resumo_arquivo = resumo
-                    st.session_state.matricula_atual = matricula
-
-# Download aparece apenas após confirmar
-if st.session_state.get('gerar_resumo'):
-    st.download_button(
-        label="📄 Baixar Resumo para Impressão",
-        data=st.session_state.resumo_arquivo,
-        file_name=f"resumo_{st.session_state.matricula_atual}_{datetime.now(fuso).strftime('%Y%m%d%H%M%S')}.txt",
-        mime="text/plain"
-    )
-
+                st.download_button(
+                    label="📄 Baixar Resumo para Impressão",
+                    data=resumo,
+                    file_name=f"resumo_{matricula}_{agora.strftime('%Y%m%d%H%M%S')}.txt",
+                    mime="text/plain"
+                )
