@@ -10,23 +10,14 @@ st.set_page_config(
 # Título da aplicação
 st.title("Ferramentaria")
 
-# Inicializa estado de página
-if 'page' not in st.session_state:
-    st.session_state.page = None
+# Menu lateral com seleção fixa
+menu = st.sidebar.radio(
+    "Menu",
+    ["Movimentação", "Colaborador", "Ferramenta", "Relatório"]
+)
 
-# Menu lateral
-st.sidebar.title("Menu")
-if st.sidebar.button("Movimentação"):
-    st.session_state.page = 'movimentacao'
-if st.sidebar.button("Colaborador"):
-    st.session_state.page = 'colaborador'
-if st.sidebar.button("Ferramenta"):
-    st.session_state.page = 'ferramenta'
-if st.sidebar.button("Relatório"):
-    st.session_state.page = 'relatorio'
-
-# Renderiza conteúdo conforme o branch selecionado
-if st.session_state.page == 'movimentacao':
+# Página Movimentação
+if menu == "Movimentação":
     st.header("Movimentação")
 
     # Linha 1: Matrícula e Nome
@@ -53,17 +44,17 @@ if st.session_state.page == 'movimentacao':
             f"Matrícula: {matricula} | Ferramenta: {ferramenta} | Tipo: {tipo}"
         )
 
-elif st.session_state.page == 'colaborador':
+# Página Colaborador
+elif menu == "Colaborador":
     st.header("Colaborador")
-    st.write("Você foi direcionado para o branch Colaborador.")
+    st.write("Você está na página de Colaborador.")
 
-elif st.session_state.page == 'ferramenta':
+# Página Ferramenta
+elif menu == "Ferramenta":
     st.header("Ferramenta")
-    st.write("Você foi direcionado para o branch Ferramenta.")
+    st.write("Você está na página de Ferramenta.")
 
-elif st.session_state.page == 'relatorio':
+# Página Relatório
+elif menu == "Relatório":
     st.header("Relatório")
-    st.write("Você foi direcionado para o branch Relatório.")
-
-else:
-    st.write("Selecione uma opção no menu lateral para navegar entre os branches.")
+    st.write("Você está na página de Relatório.")
