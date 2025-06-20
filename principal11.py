@@ -10,7 +10,7 @@ st.set_page_config(
 # Título da aplicação
 st.title("Ferramentaria")
 
-# Menu lateral com seleção fixa
+# Menu lateral
 menu = st.sidebar.radio(
     "Menu",
     ["Movimentação", "Colaborador", "Ferramenta", "Relatório"]
@@ -44,17 +44,15 @@ if menu == "Movimentação":
             f"Matrícula: {matricula} | Ferramenta: {ferramenta} | Tipo: {tipo}"
         )
 
-# Página Colaborador
+# Outras páginas (placeholders)
 elif menu == "Colaborador":
     st.header("Colaborador")
-    st.write("Você está na página de Colaborador.")
+    st.info("Página em construção.")
 
-# Página Ferramenta
 elif menu == "Ferramenta":
     st.header("Ferramenta")
-    st.write("Você está na página de Ferramenta.")
+    st.info("Página em construção.")
 
-# Página Relatório
 elif menu == "Relatório":
     st.header("Relatório")
-    st.write("Você está na página de Relatório.")
+    st.info("Página em construção.")
