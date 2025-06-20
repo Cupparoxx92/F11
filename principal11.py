@@ -5,8 +5,8 @@ import pytz
 import os
 import csv
 
-# ==========================================
-# Configurações iniciais
+# ===========================
+# Configuração inicial
 fuso = pytz.timezone('America/Sao_Paulo')
 
 # Carregar colaboradores
@@ -30,23 +30,26 @@ cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'Ferramentas', 'Observacoe
 if not os.path.exists(arquivo_mov):
     pd.DataFrame(columns=cabecalho).to_csv(arquivo_mov, index=False, encoding='utf-8-sig')
 
-# ==========================================
-# Página
+# ===========================
+# Estados da aplicação
+if 'mostrar_resumo' not in st.session_state:
+    st.session_state.mostrar_resumo = False
+if 'reset' not in st.session_state:
+    st.session_state.reset = False
+
+# ===========================
+# Título e Layout
 st.set_page_config(page_title="Controle de Ferramentas", layout="wide")
 st.title("🔧 Controle de Movimentação de Ferramentas")
 
-# Estado para controlar exibição do resumo
-if 'mostrar_resumo' not in st.session_state:
-    st.session_state.mostrar_resumo = False
-
-# ==========================================
+# ===========================
 # Formulário principal
 with st.form("movimentacao"):
 
     col1, col2, col3 = st.columns([2, 2, 1])
 
     with col1:
-        matricula = st.text_input("Matrícula")
+        matricula = st.text_input("Matrícula", value="" if st.session_state.reset else "")
     with col2:
         tipo = st.selectbox("Tipo de Movimentação", ["Retirada", "Devolução"])
     with col3:
@@ -77,15 +80,18 @@ with st.form("movimentacao"):
     confirmar = col4.form_submit_button("✅ Confirmar Movimentação")
     limpar = col5.form_submit_button("🧹 Limpar")
 
-    # ==========================================
+    # ===========================
     # Ação do botão Limpar
     if limpar:
         st.session_state.mostrar_resumo = False
-        st.experimental_rerun()
+        st.session_state.reset = True
+        st.experimental_set_query_params()  # Força reset visual
+        st.rerun()
 
-    # ==========================================
+    # ===========================
     # Ação do botão Confirmar
     if confirmar:
+        st.session_state.reset = False
         if not nome:
             st.error("Informe uma matrícula válida antes de registrar.")
             st.session_state.mostrar_resumo = False
@@ -132,7 +138,7 @@ with st.form("movimentacao"):
 
                 st.session_state.mostrar_resumo = True
 
-# ==========================================
+# ===========================
 # Mostrar botão de download APÓS confirmação
 if st.session_state.mostrar_resumo:
     with open("resumo_movimentacao.txt", "r", encoding="utf-8-sig") as file:
@@ -140,6 +146,6 @@ if st.session_state.mostrar_resumo:
     st.download_button(
         label="📄 Baixar Resumo para Impressão",
         data=conteudo,
-        file_name=f"resumo_{matricula}_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt",
+        file_name=f"resumo_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt",
         mime="text/plain"
     )
