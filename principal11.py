@@ -192,10 +192,11 @@ if menu == "Movimentação":
         submit = col3.form_submit_button("✅ Confirmar Movimentação")
         limpar = col4.form_submit_button("🧹 Limpar")
 
-    if limpar:
-        for key in st.session_state.keys():
-            del st.session_state[key]
-        st.experimental_rerun()
+if limpar:
+    for key in st.session_state.keys():
+        del st.session_state[key]
+    st.rerun()
+
 
     if submit:
         if not nome:
