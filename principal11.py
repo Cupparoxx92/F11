@@ -20,15 +20,15 @@ st.set_page_config(
 
 st.title("🛠️ Controle de Ferramentaria")
 
-# =========================
-# VARIÁVEIS
-# =========================
+# Fuso horário
 fuso = pytz.timezone('America/Sao_Paulo')
 
+# Arquivos
 arquivo_movimentacao = 'movimentacao.csv'
 arquivo_colaboradores = 'colaboradores.csv'
 arquivo_ferramentas = 'ferramentas.csv'
 
+# Cabeçalho
 cabecalho = ['DataHora', 'Matricula', 'Nome', 'Tipo', 'CodigoFerramenta', 'DescricaoFerramenta', 'Observacoes']
 
 
@@ -42,7 +42,9 @@ def inicializar_arquivo_movimentacao():
 
 def carregar_colaboradores():
     try:
-        return pd.read_csv(arquivo_colaboradores, encoding='utf-8-sig')
+        df = pd.read_csv(arquivo_colaboradores, encoding='utf-8-sig')
+        df.columns = df.columns.str.strip()
+        return df
     except:
         return pd.DataFrame(columns=['Matricula', 'Nome'])
 
@@ -56,58 +58,13 @@ def carregar_ferramentas():
         return pd.DataFrame(columns=['Codigo', 'Descricao', 'StatusConserto'])
 
 
-def registrar_movimentacao(matricula, nome, tipo, ferramentas, observacoes):
-    inicializar_arquivo_movimentacao()
-    datahora = datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S')
-
-    registros = []
-    for cod, desc in ferramentas:
-        registros.append({
-            'DataHora': datahora,
-            'Matricula': matricula,
-            'Nome': nome,
-            'Tipo': tipo,
-            'CodigoFerramenta': cod,
-            'DescricaoFerramenta': desc,
-            'Observacoes': observacoes
-        })
-
-    df = pd.DataFrame(registros)
-    df.to_csv(arquivo_movimentacao, mode='a', index=False, header=not os.path.exists(arquivo_movimentacao), encoding='utf-8-sig')
-
-    return datahora
-
-
-def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
-    resumo = f"""
-=============================================
-          RESUMO DE MOVIMENTAÇÃO
-=============================================
-Data/Hora: {datahora}
-Nome: {nome}
-Matrícula: {matricula}
-Tipo de Movimentação: {tipo}
-
-Ferramentas:
-"""
-    for c, d in ferramentas:
-        resumo += f" - {c} - {d}\n"
-
-    resumo += f"""
-Observações: {observacoes}
-=============================================
-Assinatura: ____________________________________________
-=============================================
-"""
-    return resumo
-
-
 def ferramenta_disponivel(codigo):
     ferramentas = carregar_ferramentas()
-    status = ferramentas.loc[ferramentas['Codigo'].astype(str) == str(codigo), 'StatusConserto']
-
-    if not status.empty and status.values[0] == 'Em Conserto':
-        return False
+    ferramenta = ferramentas[ferramentas['Codigo'].astype(str) == str(codigo)]
+    if not ferramenta.empty:
+        status = ferramenta.iloc[0]['StatusConserto']
+        if status == 'Em Conserto':
+            return False
 
     if not os.path.exists(arquivo_movimentacao):
         return True
@@ -120,6 +77,51 @@ def ferramenta_disponivel(codigo):
 
     ultima_mov = df.iloc[-1]
     return ultima_mov['Tipo'] != 'Retirada'
+
+
+def registrar_movimentacao(matricula, nome, tipo, ferramentas, observacoes):
+    inicializar_arquivo_movimentacao()
+    datahora = datetime.now(fuso).strftime('%d/%m/%Y %H:%M:%S')
+
+    linhas = []
+    for codigo, descricao in ferramentas:
+        linhas.append({
+            'DataHora': datahora,
+            'Matricula': matricula,
+            'Nome': nome,
+            'Tipo': tipo,
+            'CodigoFerramenta': codigo,
+            'DescricaoFerramenta': descricao,
+            'Observacoes': observacoes
+        })
+
+    df = pd.DataFrame(linhas)
+    df.to_csv(arquivo_movimentacao, mode='a', index=False, header=False, encoding='utf-8-sig')
+
+    return datahora
+
+
+def gerar_resumo(datahora, matricula, nome, tipo, ferramentas, observacoes):
+    resumo = f"""
+    =============================================
+                 RESUMO DE MOVIMENTAÇÃO
+    =============================================
+    Data/Hora: {datahora}
+    Nome: {nome}
+    Matrícula: {matricula}
+    Tipo de Movimentação: {tipo}
+
+    Ferramentas:
+    """
+    for c, d in ferramentas:
+        resumo += f" - {c} - {d}\n"
+
+    resumo += f"""
+    \nObservações: {observacoes}
+    \n\nAssinatura: ____________________________________________
+    =============================================
+    """
+    return resumo
 
 
 # =========================
@@ -136,9 +138,11 @@ menu = st.sidebar.radio(
 colaboradores = carregar_colaboradores()
 ferramentas = carregar_ferramentas()
 
+
 # =========================
 # PÁGINAS DO MENU
 # =========================
+
 if menu == "Movimentação":
     st.subheader("📦 Movimentação de Ferramentas")
 
@@ -172,7 +176,9 @@ if menu == "Movimentação":
 
                         if tipo == "Retirada":
                             if not ferramenta_disponivel(codigo):
-                                st.error(f"⚠️ A ferramenta {codigo} - {desc} está retirada ou em conserto!")
+                                st.error(
+                                    f"⚠️ A ferramenta {codigo} - {desc} está retirada ou em conserto!"
+                                )
                                 erro_ferramenta = True
                                 desc = ""
 
@@ -187,6 +193,8 @@ if menu == "Movimentação":
         limpar = col4.form_submit_button("🧹 Limpar")
 
     if limpar:
+        for key in st.session_state.keys():
+            del st.session_state[key]
         st.experimental_rerun()
 
     if submit:
@@ -211,8 +219,10 @@ if menu == "Movimentação":
 
                 st.success("✅ Movimentação registrada com sucesso!")
 
-                resumo = gerar_resumo(datahora, matricula, nome, tipo, ferramentas_validas,
-                                      observacoes if observacoes else "Sem Observações")
+                resumo = gerar_resumo(
+                    datahora, matricula, nome, tipo,
+                    ferramentas_validas, observacoes if observacoes else "Sem Observações"
+                )
 
                 st.download_button(
                     label="📄 Baixar Resumo para Impressão",
@@ -221,11 +231,17 @@ if menu == "Movimentação":
                     mime="text/plain"
                 )
 
+
+# >>>>>>>>> COLABORADOR <<<<<<<<<<<
 elif menu == "Colaborador":
     pagina_colaborador()
 
+
+# >>>>>>>>> FERRAMENTA <<<<<<<<<<<
 elif menu == "Ferramenta":
     pagina_ferramenta()
 
+
+# >>>>>>>>> RELATÓRIO <<<<<<<<<<<
 elif menu == "Relatório":
     pagina_relatorio()
